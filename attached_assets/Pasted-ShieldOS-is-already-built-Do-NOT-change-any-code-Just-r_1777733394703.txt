@@ -1,0 +1,84 @@
+ShieldOS is already built. Do NOT change any code.
+
+Just run these checks and tell me what is working
+and what is broken:
+
+════════════════════════════════════════════
+CHECK 1 — AUTH
+════════════════════════════════════════════
+- Can login with admin/shieldos123?
+- Does JWT token generate correctly?
+- Does refresh token rotate on use?
+- Do protected routes redirect to login
+  when no token present?
+- Does logout clear tokens?
+
+════════════════════════════════════════════
+CHECK 2 — DASHBOARD
+════════════════════════════════════════════
+- Do all 4 stat cards load?
+- Does the 24-hour bar chart render?
+- Does the category pie/bar chart render?
+- Are numbers showing (even if fake/zero)?
+
+════════════════════════════════════════════
+CHECK 3 — BLOCKLIST
+════════════════════════════════════════════
+- Do the 10 pre-seeded domains show?
+- Can you add a new domain?
+- Can you delete a domain?
+- Does category filter work?
+- Does search bar filter results?
+
+════════════════════════════════════════════
+CHECK 4 — DEVICES
+════════════════════════════════════════════
+- Can you add a new device?
+- Does it generate a WireGuard .conf file?
+- Does the .conf contain a valid keypair?
+- Can you revoke a device?
+- Does revoked device disappear from list?
+
+════════════════════════════════════════════
+CHECK 5 — THREATS
+════════════════════════════════════════════
+- Do the 5 pre-seeded threats show?
+- Can you submit a new threat report?
+- Do upvote/downvote buttons work?
+- Does a threat auto-verify at 10+ upvotes?
+
+════════════════════════════════════════════
+CHECK 6 — SECURITY
+════════════════════════════════════════════
+- Are passwords hashed with bcrypt (12 rounds)?
+- Are all API routes returning 401
+  when called without token?
+- Are tokens stored in httpOnly cookies
+  or localStorage?
+- Do Zod validation errors return 400
+  with clear message?
+
+════════════════════════════════════════════
+CHECK 7 — DATABASE
+════════════════════════════════════════════
+- Is SQLite file created on startup?
+- Do all tables exist:
+  * users
+  * devices
+  * blocklist_entries
+  * threat_reports
+- Does data persist after server restart?
+
+════════════════════════════════════════════
+REPORT FORMAT
+════════════════════════════════════════════
+For each check return:
+
+✅ WORKING   — feature works correctly
+⚠️ PARTIAL   — works but has issues (describe)
+❌ BROKEN    — not working (describe exact error)
+
+Then give me a summary:
+- Total working: X/Y
+- Critical issues: list them
+- Quick fixes needed: list them
