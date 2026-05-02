@@ -10,6 +10,7 @@ export const usersTable = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   isActive: boolean("is_active").notNull().default(true),
   lastLoginAt: timestamp("last_login_at"),
+  clerkId: text("clerk_id").unique(),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({
