@@ -96,13 +96,30 @@ lib/
 - `/threats` — Community threat feed with voting
 - `/settings` — Profile tab (shows role badge); admin-only "Users" tab with full operator roster management (promote/demote, activate/deactivate, reset password + copy to clipboard)
 
-## Android Integration
+## Android API Layer
 
-The Android app should call `POST /api/v1/log/request` for every DNS query:
-```json
-{ "device_id": 1, "domain": "example.com", "timestamp": "2024-01-01T00:00:00Z" }
-```
-Response: `{ "blocked": true, "category": "ads" }`
+All Android endpoints live under `/api/android/*` (no `/v1/` prefix). Route file: `artifacts/api-server/src/routes/android.ts`.
+
+### Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/android/auth/login` | none | 30-day JWT + server config + feature_flags |
+| POST | `/android/dns/check` | Bearer | Block-check domain; LRU cache (10k entries), async DB log |
+| GET  | `/android/blocklist/sync` | Bearer | Full system blocklist, gzip-compressed, ETag + 304 support |
+| POST | `/android/stats/push` | Bearer | Hourly aggregated stats from device |
+| POST | `/android/device/register` | Bearer | Register device, returns WireGuard config |
+| GET  | `/android/docs` | none | HTML developer documentation page |
+
+### Implementation Notes
+
+- **LRU cache**: 10k-entry inline implementation (no external package). Cache key: `${userId}:${domain}`.
+- **Blocklist gzip cache**: rebuilt every 5 min max; ~1.6MB gzip for 83k+ domains.
+- **ETag 304**: `If-None-Match` header checked against SHA-1 of domain list.
+- **Async DNS logging**: `setImmediate()` used so DB insert never blocks the DNS response.
+- **30-day tokens**: `jwt.sign(..., { expiresIn: "30d" })` — separate from web 15min access tokens.
+- **ANDROID_APP_SECRET**: optional env var; if set, all `/android/*` routes require `X-Android-Secret` header match. Docs page is exempt.
+- `REPLIT_DOMAINS` env used to build `server_url` and `blocklist_url` in responses.
 
 ## Demo Credentials
 
@@ -122,5 +139,6 @@ Response: `{ "blocked": true, "category": "ads" }`
 - `JWT_SECRET` — Secret for JWT signing (defaults to dev value if not set)
 - `WG_SERVER_PUBLIC_KEY` — WireGuard server public key (optional)
 - `WG_SERVER_ENDPOINT` — WireGuard server endpoint (optional)
+- `ANDROID_APP_SECRET` — Optional shared secret; if set, all `/android/*` routes require `X-Android-Secret: <value>` header
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

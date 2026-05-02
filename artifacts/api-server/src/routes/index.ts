@@ -9,6 +9,7 @@ import logRouter from "./log";
 import statsRouter from "./stats";
 import adminRouter from "./admin";
 import exportRouter from "./export";
+import androidRouter from "./android";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(logRouter);
 router.use(statsRouter);
 router.use(adminRouter);
 router.use(exportRouter);
+router.use(androidRouter);
 
 export default router;
