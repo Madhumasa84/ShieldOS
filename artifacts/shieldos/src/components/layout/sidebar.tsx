@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, Shield, ShieldAlert, MonitorSmartphone, Settings, LogOut } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
-import { clearTokens } from "@/lib/auth";
+import { clearTokens, getUserRole } from "@/lib/auth";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -14,14 +14,19 @@ const navItems = [
 export function Sidebar() {
   const [location, setLocation] = useLocation();
   const logoutMutation = useLogout();
+  const role = getUserRole();
+  const isAdmin = role === "admin";
 
   const handleLogout = () => {
-    logoutMutation.mutate({ data: { refreshToken: localStorage.getItem("shieldos_refresh_token") || "" } }, {
-      onSettled: () => {
-        clearTokens();
-        setLocation("/login");
+    logoutMutation.mutate(
+      { data: { refreshToken: localStorage.getItem("shieldos_refresh_token") || "" } },
+      {
+        onSettled: () => {
+          clearTokens();
+          setLocation("/login");
+        },
       }
-    });
+    );
   };
 
   return (
@@ -52,7 +57,13 @@ export function Sidebar() {
         })}
       </div>
 
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-border space-y-2">
+        {isAdmin && (
+          <div className="px-4 py-1.5 rounded-md bg-primary/10 border border-primary/20 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_var(--primary)]" />
+            <span className="text-xs font-bold text-primary uppercase tracking-widest">Admin Access</span>
+          </div>
+        )}
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 w-full rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors text-left"

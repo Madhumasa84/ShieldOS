@@ -41,6 +41,7 @@ export const LoginBody = zod.object({
 export const LoginResponse = zod.object({
   userId: zod.number(),
   username: zod.string(),
+  role: zod.string(),
   accessToken: zod.string(),
   refreshToken: zod.string(),
 });
@@ -55,6 +56,7 @@ export const RefreshTokenBody = zod.object({
 export const RefreshTokenResponse = zod.object({
   userId: zod.number(),
   username: zod.string(),
+  role: zod.string(),
   accessToken: zod.string(),
   refreshToken: zod.string(),
 });
@@ -76,6 +78,7 @@ export const LogoutResponse = zod.object({
 export const GetMeResponse = zod.object({
   id: zod.number(),
   username: zod.string(),
+  role: zod.string(),
   createdAt: zod.coerce.date(),
   isActive: zod.boolean(),
 });
@@ -427,6 +430,64 @@ export const GetStatsDashboardResponse = zod.object({
       count: zod.number(),
     }),
   ),
+});
+
+/**
+ * @summary List all users with device count and last login (admin only)
+ */
+export const GetAdminUsersResponse = zod.object({
+  users: zod.array(
+    zod.object({
+      id: zod.number(),
+      username: zod.string(),
+      role: zod.string(),
+      isActive: zod.boolean(),
+      createdAt: zod.coerce.date(),
+      lastLoginAt: zod.coerce.date().nullish(),
+      deviceCount: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * @summary Promote or demote a user (admin only)
+ */
+export const UpdateUserRoleParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const UpdateUserRoleBody = zod.object({
+  role: zod.enum(["admin", "user"]),
+});
+
+export const UpdateUserRoleResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Activate or deactivate a user (admin only)
+ */
+export const UpdateUserStatusParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const UpdateUserStatusBody = zod.object({
+  isActive: zod.boolean(),
+});
+
+export const UpdateUserStatusResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Reset a user's password and return a temp password (admin only)
+ */
+export const ResetUserPasswordParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const ResetUserPasswordResponse = zod.object({
+  tempPassword: zod.string(),
 });
 
 /**

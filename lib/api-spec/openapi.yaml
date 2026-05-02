@@ -20,6 +20,8 @@ tags:
     description: Threat intelligence
   - name: dashboard
     description: Dashboard aggregates
+  - name: admin
+    description: Admin user management
 
 paths:
   /healthz:
@@ -549,6 +551,97 @@ paths:
               schema:
                 $ref: "#/components/schemas/StatsDashboard"
 
+  # ADMIN
+  /v1/admin/users:
+    get:
+      operationId: getAdminUsers
+      tags: [admin]
+      summary: List all users with device count and last login (admin only)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUsersResponse"
+
+  /v1/admin/users/{userId}/role:
+    patch:
+      operationId: updateUserRole
+      tags: [admin]
+      summary: Promote or demote a user (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRoleBody"
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /v1/admin/users/{userId}/status:
+    patch:
+      operationId: updateUserStatus
+      tags: [admin]
+      summary: Activate or deactivate a user (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserStatusBody"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /v1/admin/users/{userId}/reset-password:
+    post:
+      operationId: resetUserPassword
+      tags: [admin]
+      summary: Reset a user's password and return a temp password (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetPasswordResponse"
+
   # DASHBOARD
   /v1/dashboard/summary:
     get:
@@ -653,11 +746,13 @@ components:
           type: integer
         username:
           type: string
+        role:
+          type: string
         accessToken:
           type: string
         refreshToken:
           type: string
-      required: [userId, username, accessToken, refreshToken]
+      required: [userId, username, role, accessToken, refreshToken]
 
     User:
       type: object
@@ -666,12 +761,67 @@ components:
           type: integer
         username:
           type: string
+        role:
+          type: string
         createdAt:
           type: string
           format: date-time
         isActive:
           type: boolean
-      required: [id, username, createdAt, isActive]
+      required: [id, username, role, createdAt, isActive]
+
+    AdminUserItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+        deviceCount:
+          type: integer
+      required: [id, username, role, isActive, createdAt, deviceCount]
+
+    AdminUsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUserItem"
+      required: [users]
+
+    UpdateUserRoleBody:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [admin, user]
+      required: [role]
+
+    UpdateUserStatusBody:
+      type: object
+      properties:
+        isActive:
+          type: boolean
+      required: [isActive]
+
+    ResetPasswordResponse:
+      type: object
+      properties:
+        tempPassword:
+          type: string
+      required: [tempPassword]
 
     # VPN
     ProvisionDeviceBody:

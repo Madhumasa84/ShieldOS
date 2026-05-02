@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { isAuthenticated } from "@/lib/auth";
 
 import Login from "@/pages/login";
+import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
 import Blocklist from "@/pages/blocklist";
 import Devices from "@/pages/devices";
@@ -38,14 +39,15 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      
+      <Route path="/register" component={Register} />
+
       <ProtectedRoute path="/" component={() => <Redirect to="/dashboard" />} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/blocklist" component={Blocklist} />
       <ProtectedRoute path="/devices" component={Devices} />
       <ProtectedRoute path="/threats" component={Threats} />
       <ProtectedRoute path="/settings" component={Settings} />
-      
+
       <Route component={NotFound} />
     </Switch>
   );

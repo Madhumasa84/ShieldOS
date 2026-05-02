@@ -35,6 +35,7 @@ export interface RefreshBody {
 export interface AuthResponse {
   userId: number;
   username: string;
+  role: string;
   accessToken: string;
   refreshToken: string;
 }
@@ -42,8 +43,43 @@ export interface AuthResponse {
 export interface User {
   id: number;
   username: string;
+  role: string;
   createdAt: string;
   isActive: boolean;
+}
+
+export interface AdminUserItem {
+  id: number;
+  username: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLoginAt?: string | null;
+  deviceCount: number;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUserItem[];
+}
+
+export type UpdateUserRoleBodyRole =
+  (typeof UpdateUserRoleBodyRole)[keyof typeof UpdateUserRoleBodyRole];
+
+export const UpdateUserRoleBodyRole = {
+  admin: "admin",
+  user: "user",
+} as const;
+
+export interface UpdateUserRoleBody {
+  role: UpdateUserRoleBodyRole;
+}
+
+export interface UpdateUserStatusBody {
+  isActive: boolean;
+}
+
+export interface ResetPasswordResponse {
+  tempPassword: string;
 }
 
 export interface ProvisionDeviceBody {

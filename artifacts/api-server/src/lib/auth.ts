@@ -14,12 +14,12 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export function signAccessToken(userId: number, username: string): string {
-  return jwt.sign({ userId, username }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+export function signAccessToken(userId: number, username: string, role: string): string {
+  return jwt.sign({ userId, username, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
-export function verifyAccessToken(token: string): { userId: number; username: string } {
-  return jwt.verify(token, JWT_SECRET) as { userId: number; username: string };
+export function verifyAccessToken(token: string): { userId: number; username: string; role: string } {
+  return jwt.verify(token, JWT_SECRET) as { userId: number; username: string; role: string };
 }
 
 export function generateRefreshToken(): string {

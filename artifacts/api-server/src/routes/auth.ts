@@ -1,10 +1,7 @@
 import { Router } from "express";
 import { eq, and, gt, isNull } from "drizzle-orm";
 import { db } from "@workspace/db";
-import {
-  usersTable,
-  refreshTokensTable,
-} from "@workspace/db";
+import { usersTable, refreshTokensTable } from "@workspace/db";
 import {
   hashPassword,
   verifyPassword,
@@ -13,12 +10,7 @@ import {
   getRefreshExpiresAt,
 } from "../lib/auth";
 import { requireAuth, AuthRequest } from "../middlewares/requireAuth";
-import {
-  RegisterBody,
-  LoginBody,
-  RefreshTokenBody,
-  LogoutBody,
-} from "@workspace/api-zod";
+import { RegisterBody, LoginBody, RefreshTokenBody, LogoutBody } from "@workspace/api-zod";
 
 const router = Router();
 
@@ -29,6 +21,11 @@ router.post("/v1/auth/register", async (req, res) => {
     return;
   }
   const { username, password } = parse.data;
+
+  if (!/^[a-zA-Z0-9_]{3,32}$/.test(username)) {
+    res.status(400).json({ message: "Username must be 3-32 alphanumeric characters (underscores allowed)" });
+    return;
+  }
 
   const existing = await db
     .select()
@@ -44,10 +41,10 @@ router.post("/v1/auth/register", async (req, res) => {
   const passwordHash = await hashPassword(password);
   const [user] = await db
     .insert(usersTable)
-    .values({ username, passwordHash, isActive: true })
+    .values({ username, passwordHash, role: "user", isActive: true })
     .returning();
 
-  const accessToken = signAccessToken(user.id, user.username);
+  const accessToken = signAccessToken(user.id, user.username, user.role);
   const refreshToken = generateRefreshToken();
   await db.insert(refreshTokensTable).values({
     userId: user.id,
@@ -58,6 +55,7 @@ router.post("/v1/auth/register", async (req, res) => {
   res.status(201).json({
     userId: user.id,
     username: user.username,
+    role: user.role,
     accessToken,
     refreshToken,
   });
@@ -88,7 +86,12 @@ router.post("/v1/auth/login", async (req, res) => {
     return;
   }
 
-  const accessToken = signAccessToken(user.id, user.username);
+  await db
+    .update(usersTable)
+    .set({ lastLoginAt: new Date() })
+    .where(eq(usersTable.id, user.id));
+
+  const accessToken = signAccessToken(user.id, user.username, user.role);
   const refreshToken = generateRefreshToken();
   await db.insert(refreshTokensTable).values({
     userId: user.id,
@@ -99,6 +102,7 @@ router.post("/v1/auth/login", async (req, res) => {
   res.json({
     userId: user.id,
     username: user.username,
+    role: user.role,
     accessToken,
     refreshToken,
   });
@@ -141,11 +145,11 @@ router.post("/v1/auth/refresh", async (req, res) => {
     .limit(1);
 
   if (!user || !user.isActive) {
-    res.status(401).json({ message: "User not found" });
+    res.status(401).json({ message: "User not found or suspended" });
     return;
   }
 
-  const newAccessToken = signAccessToken(user.id, user.username);
+  const newAccessToken = signAccessToken(user.id, user.username, user.role);
   const newRefreshToken = generateRefreshToken();
   await db.insert(refreshTokensTable).values({
     userId: user.id,
@@ -156,6 +160,7 @@ router.post("/v1/auth/refresh", async (req, res) => {
   res.json({
     userId: user.id,
     username: user.username,
+    role: user.role,
     accessToken: newAccessToken,
     refreshToken: newRefreshToken,
   });
@@ -191,6 +196,7 @@ router.get("/v1/auth/me", requireAuth, async (req: AuthRequest, res) => {
   res.json({
     id: user.id,
     username: user.username,
+    role: user.role,
     createdAt: user.createdAt,
     isActive: user.isActive,
   });

@@ -1,11 +1,9 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
-import { useLogin, useRegister } from "@workspace/api-client-react";
-import { setAuthToken, setRefreshToken } from "@/lib/auth";
+import { useLogin } from "@workspace/api-client-react";
+import { setAuthToken, setRefreshToken, setUserRole } from "@/lib/auth";
 import { ShieldAlert, Terminal, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -13,78 +11,41 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-const authSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters").max(32, "Username is too long"),
+const loginSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-type AuthFormValues = z.infer<typeof authSchema>;
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [isRegistering, setIsRegistering] = useState(false);
-
   const loginMutation = useLogin();
-  const registerMutation = useRegister();
 
-  const form = useForm<AuthFormValues>({
-    resolver: zodResolver(authSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { username: "", password: "" },
   });
 
-  const onSubmit = (data: AuthFormValues) => {
-    if (isRegistering) {
-      registerMutation.mutate(
-        { data },
-        {
-          onSuccess: (res) => {
-            setAuthToken(res.accessToken);
-            setRefreshToken(res.refreshToken);
-            toast({
-              title: "Access Granted",
-              description: "New operator profile registered.",
-            });
-            setLocation("/dashboard");
-          },
-          onError: (err: any) => {
-            toast({
-              title: "Registration Failed",
-              description: err?.message || "Invalid credentials format.",
-              variant: "destructive",
-            });
-          },
-        }
-      );
-    } else {
-      loginMutation.mutate(
-        { data },
-        {
-          onSuccess: (res) => {
-            setAuthToken(res.accessToken);
-            setRefreshToken(res.refreshToken);
-            toast({
-              title: "Access Granted",
-              description: "Session established.",
-            });
-            setLocation("/dashboard");
-          },
-          onError: (err: any) => {
-            toast({
-              title: "Authentication Failed",
-              description: err?.message || "Invalid username or password.",
-              variant: "destructive",
-            });
-          },
-        }
-      );
-    }
+  const onSubmit = (data: LoginFormValues) => {
+    loginMutation.mutate(
+      { data },
+      {
+        onSuccess: (res) => {
+          setAuthToken(res.accessToken);
+          setRefreshToken(res.refreshToken);
+          setUserRole((res as any).role ?? "user");
+          toast({ title: "Access Granted", description: "Session established." });
+          setLocation("/dashboard");
+        },
+        onError: (err: any) => {
+          const msg = err?.response?.data?.message || err?.message || "Invalid username or password.";
+          toast({ title: "Authentication Failed", description: msg, variant: "destructive" });
+        },
+      }
+    );
   };
-
-  const isPending = loginMutation.isPending || registerMutation.isPending;
 
   return (
     <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center p-4 font-mono dark relative overflow-hidden">
@@ -106,13 +67,9 @@ export default function Login() {
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
               <Terminal className="w-5 h-5 text-primary" />
-              {isRegistering ? "Operator Registration" : "Terminal Login"}
+              Terminal Login
             </CardTitle>
-            <CardDescription>
-              {isRegistering
-                ? "Provision a new command profile."
-                : "Enter credentials to access the secure network."}
-            </CardDescription>
+            <CardDescription>Enter credentials to access the secure network.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -159,20 +116,18 @@ export default function Login() {
                 <Button
                   type="submit"
                   className="w-full font-mono font-bold uppercase tracking-wider mt-6"
-                  disabled={isPending}
+                  disabled={loginMutation.isPending}
                 >
-                  {isPending ? "Authenticating..." : isRegistering ? "Register Profile" : "Initialize Session"}
+                  {loginMutation.isPending ? "Authenticating..." : "Initialize Session"}
                 </Button>
 
                 <div className="text-center mt-4">
                   <button
                     type="button"
-                    onClick={() => setIsRegistering(!isRegistering)}
+                    onClick={() => setLocation("/register")}
                     className="text-xs text-muted-foreground hover:text-primary transition-colors underline underline-offset-4"
                   >
-                    {isRegistering
-                      ? "Already have an operator profile? Login"
-                      : "Request new operator profile"}
+                    Request new operator profile
                   </button>
                 </div>
               </form>

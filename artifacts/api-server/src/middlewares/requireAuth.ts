@@ -4,6 +4,7 @@ import { verifyAccessToken } from "../lib/auth";
 export interface AuthRequest extends Request {
   userId?: number;
   username?: string;
+  role?: string;
 }
 
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
@@ -17,6 +18,7 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
     const payload = verifyAccessToken(token);
     req.userId = payload.userId;
     req.username = payload.username;
+    req.role = payload.role ?? "user";
     next();
   } catch {
     res.status(401).json({ message: "Invalid or expired token" });

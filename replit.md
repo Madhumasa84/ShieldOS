@@ -2,7 +2,7 @@
 
 ## Overview
 
-Full-stack privacy backend + admin dashboard for an Android privacy app that blocks trackers and protects user data.
+Full-stack privacy backend + admin dashboard for an Android privacy app that blocks trackers and protects user data. Supports full multi-user system with admin and user roles.
 
 ## Stack
 
@@ -35,7 +35,7 @@ lib/
 
 ## Database Schema
 
-- `users` — username + bcrypt password hash
+- `users` — username, bcrypt password hash, `role` (admin|user), `lastLoginAt`, `isActive`
 - `refresh_tokens` — JWT refresh token rotation
 - `devices` — WireGuard VPN devices per user (`last_seen` tracks device activity)
 - `blocklist_entries` — custom domain blocklist (per-user)
@@ -44,6 +44,13 @@ lib/
 - `threat_votes` — user upvote/downvote on threats
 - `system_blocklist` — 83k+ domains from StevenBlack/AdAway (auto-synced)
 - `blocklist_sync_status` — sync run history (status, total, timestamps)
+
+## User Roles
+
+- **admin**: sees all devices + global stats across all users; access to admin routes; admin badge in sidebar
+- **user**: sees only own devices + own stats; no access to admin routes
+- Role is stored in JWT payload (`role` claim) and in `localStorage` (`shieldos_role`)
+- `requireAdmin` middleware enforces admin-only routes
 
 ## Blocklist Engine
 
@@ -54,29 +61,31 @@ lib/
 
 ## API Routes (all under /api)
 
-- `/v1/auth/*` — register, login, refresh, logout, me
+- `/v1/auth/register` — creates user-role account; returns `{ userId, username, role, accessToken, refreshToken }`
+- `/v1/auth/login` — returns same + updates `lastLoginAt`
+- `/v1/auth/refresh` — rotates token, returns role
+- `/v1/auth/logout` — revokes refresh token
+- `/v1/auth/me` — returns current user profile with role
 - `/v1/vpn/*` — provision device, list configs, revoke, status
-- `/v1/blocklist/check` — check domain against custom + system blocklist
-- `/v1/blocklist/stats` — custom + system counts, sync status
-- `/v1/blocklist/custom` — list/add/remove custom user domains
-- `/v1/blocklist/system` — paginated system blocklist (search/filter)
-- `/v1/blocklist/sync-status` — latest sync run details
-- `/v1/blocklist/sync` — trigger manual sync (POST)
-- `/v1/blocklist/import` — upload hosts .txt file (POST, multipart)
-- `/v1/blocklist/blocked-requests` — blocked request log
-- `/v1/log/request` — Android DNS query logger: checks blocklist, logs result, updates device last_seen
-- `/v1/stats/dashboard` — single comprehensive live stats endpoint (auto-refreshed by frontend)
+- `/v1/blocklist/*` — check, stats, custom list, system list, sync, import
+- `/v1/log/request` — Android DNS query logger
+- `/v1/stats/dashboard` — admin=global stats, user=own stats; includes `is_admin` flag
 - `/v1/threats/*` — feed, report, vote, stats
-- `/v1/dashboard/*` — legacy summary, blocked chart (24h), category breakdown
+- `/v1/dashboard/*` — legacy summary/chart endpoints
+- `/v1/admin/users` — GET list all users (admin only)
+- `/v1/admin/users/:id/role` — PATCH promote/demote (admin only)
+- `/v1/admin/users/:id/status` — PATCH activate/deactivate (admin only, cannot touch admin accounts)
+- `/v1/admin/users/:id/reset-password` — POST returns temp password (admin only)
 
 ## Frontend Pages
 
-- `/login` — Terminal-style auth (register/login)
-- `/dashboard` — Live stats (auto-refresh 30s, animated counters, "last updated" badge), hourly chart, category pie, top 10 blocked domains, session report
+- `/login` — Terminal-style login; "Request new operator profile" links to /register
+- `/register` — Dedicated registration page: alphanumeric username validation, password strength meter (4-segment bar + requirements checklist), confirm password, "Already have a profile? Login" link
+- `/dashboard` — Live stats (auto-refresh 30s, animated counters), hourly chart, category pie, top 10 blocked domains; admin sees global stats
 - `/blocklist` — System tab (83k+ domains) + Custom tab (add/remove/import)
 - `/devices` — WireGuard VPN device management + config generation
 - `/threats` — Community threat feed with voting
-- `/settings` — Account info
+- `/settings` — Profile tab (shows role badge); admin-only "Users" tab with full operator roster management (promote/demote, activate/deactivate, reset password + copy to clipboard)
 
 ## Android Integration
 
@@ -85,12 +94,11 @@ The Android app should call `POST /api/v1/log/request` for every DNS query:
 { "device_id": 1, "domain": "example.com", "timestamp": "2024-01-01T00:00:00Z" }
 ```
 Response: `{ "blocked": true, "category": "ads" }`
-This logs the query, returns the block decision, and updates the device's `last_seen`.
 
 ## Demo Credentials
 
-- Username: `admin`
-- Password: `shieldos123`
+- Username: `admin` / Password: `shieldos123` (role: admin)
+- New users registered via /register get role: user
 
 ## Key Commands
 

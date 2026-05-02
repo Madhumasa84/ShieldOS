@@ -7,6 +7,7 @@ import threatsRouter from "./threats";
 import dashboardRouter from "./dashboard";
 import logRouter from "./log";
 import statsRouter from "./stats";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(threatsRouter);
 router.use(dashboardRouter);
 router.use(logRouter);
 router.use(statsRouter);
+router.use(adminRouter);
 
 export default router;
