@@ -356,6 +356,11 @@ export async function customFetch<T = unknown>(
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
+  } else if (!headers.has("authorization") && typeof window !== "undefined") {
+    const token = localStorage.getItem("shieldos_access_token");
+    if (token) {
+      headers.set("authorization", `Bearer ${token}`);
+    }
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
@@ -363,6 +368,13 @@ export async function customFetch<T = unknown>(
   const response = await fetch(input, { ...init, method, headers });
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      localStorage.removeItem("shieldos_access_token");
+      localStorage.removeItem("shieldos_refresh_token");
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
     const errorData = await parseErrorBody(response, method);
     throw new ApiError(response, errorData, requestInfo);
   }

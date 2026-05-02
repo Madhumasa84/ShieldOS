@@ -1,0 +1,385 @@
+You are a senior full-stack engineer.
+
+Build a complete privacy backend + web dashboard called
+"ShieldOS" on Replit using Python + FastAPI + React.
+
+This is the backend and admin panel for an Android
+privacy app that blocks tracking and protects user data.
+
+════════════════════════════════════════════
+REPLIT ENVIRONMENT CONSTRAINTS
+════════════════════════════════════════════
+- Runtime: Python 3.11 (backend) + Node 20 (frontend)
+- No Docker (use Replit's native runner)
+- Use Replit Secrets for all API keys and passwords
+- Use Replit DB or PostgreSQL (via Neon.tech free tier)
+- Use Replit's always-on for background workers
+- Single repl: monorepo with /backend and /frontend folders
+- Entry point: main.py starts both servers
+
+════════════════════════════════════════════
+PROJECT STRUCTURE
+════════════════════════════════════════════
+shieldos/
+├── main.py                    # Starts everything
+├── backend/
+│   ├── app.py                 # FastAPI app
+│   ├── routers/
+│   │   ├── auth.py            # Register/login/JWT
+│   │   ├── vpn.py             # WireGuard config gen
+│   │   ├── blocklist.py       # Blocklist API
+│   │   ├── firewall.py        # Firewall rules API
+│   │   └── threats.py         # Threat intelligence
+│   ├── services/
+│   │   ├── auth_service.py    # Argon2 hashing, JWT
+│   │   ├── vpn_service.py     # WireGuard key gen
+│   │   ├── blocklist_service.py # Domain blocklist
+│   │   └── threat_service.py  # Threat feed
+│   ├── models/
+│   │   ├── database.py        # SQLAlchemy + Neon DB
+│   │   └── schemas.py         # Pydantic models
+│   └── middleware/
+│       ├── rate_limit.py      # slowapi rate limiter
+│       └── security.py        # Security headers
+├── frontend/
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── src/
+│       ├── App.tsx
+│       ├── pages/
+│       │   ├── Dashboard.tsx  # Main privacy dashboard
+│       │   ├── Blocklist.tsx  # Manage blocklists
+│       │   ├── Devices.tsx    # Connected devices
+│       │   ├── Threats.tsx    # Threat intelligence
+│       │   └── Settings.tsx   # Server settings
+│       ├── components/
+│       │   ├── StatsCard.tsx
+│       │   ├── TrackerMap.tsx
+│       │   ├── ThreatFeed.tsx
+│       │   ├── BlocklistTable.tsx
+│       │   └── DeviceList.tsx
+│       └── lib/
+│           ├── api.ts         # API client
+│           └── auth.ts        # Auth helpers
+├── .replit
+├── replit.nix
+└── requirements.txt
+
+════════════════════════════════════════════
+PART 1 — BACKEND (FastAPI)
+════════════════════════════════════════════
+
+FILE: backend/app.py
+- FastAPI with CORS, security headers middleware
+- Rate limiting with slowapi
+- JWT authentication (RS256)
+- All routes prefixed /api/v1
+- OpenAPI docs at /docs (dev only)
+- Health check at /health
+
+FILE: backend/models/database.py
+- SQLAlchemy async with PostgreSQL (Neon.tech)
+- Connection string from Replit Secrets: DATABASE_URL
+- Tables:
+  * users (id, username, argon2_hash, created_at, is_active)
+  * devices (id, user_id, name, wireguard_pubkey, created_at)
+  * blocklist_entries (id, domain, category, source, added_at)
+  * blocked_requests (id, device_id, domain, timestamp, category)
+  * threat_reports (id, domain, reporter, votes, verified)
+  * firewall_rules (id, device_id, app_package, rule, created_at)
+
+FILE: backend/routers/auth.py
+- POST /api/v1/auth/register
+  * Body: {username, password}
+  * Hash password with Argon2id
+  * No email required
+  * Return: {user_id, access_token, refresh_token}
+- POST /api/v1/auth/login
+  * Return JWT (15min expiry) + refresh token (7 days)
+- POST /api/v1/auth/refresh
+  * Rotate refresh token on use
+- POST /api/v1/auth/logout
+  * Invalidate refresh token
+
+FILE: backend/routers/vpn.py
+- POST /api/v1/vpn/provision
+  * Generate WireGuard keypair for device
+  * Return .conf file content as string
+  * Store public key in devices table
+- GET /api/v1/vpn/configs
+  * List all user's device configs
+- DELETE /api/v1/vpn/revoke/{device_id}
+  * Revoke device VPN access
+- GET /api/v1/vpn/status
+  * Return server stats (connected devices, bandwidth)
+
+WireGuard key generation (pure Python, no system calls):
+- Use cryptography library for Curve25519 key generation
+- Format as base64 WireGuard-compatible keys
+- Generate complete .conf file content
+
+FILE: backend/routers/blocklist.py
+- GET /api/v1/blocklist/download
+  * Returns compressed (gzip) blocklist
+  * 300,000+ domains merged from:
+    - StevenBlack hosts (fetch from GitHub)
+    - AdAway default list
+    - EasyPrivacy
+  * Cache in Redis/memory for 24 hours
+- GET /api/v1/blocklist/diff?since={timestamp}
+  * Returns only new/removed domains since timestamp
+- POST /api/v1/blocklist/check
+  * Body: {domain}
+  * Returns: {blocked: bool, category: string}
+- POST /api/v1/blocklist/custom/add
+  * User adds custom domain to blocklist
+- DELETE /api/v1/blocklist/custom/{domain}
+  * Remove from custom blocklist
+- GET /api/v1/blocklist/stats
+  * Total domains, by category breakdown
+
+FILE: backend/routers/threats.py
+- GET /api/v1/threats/feed
+  * Latest verified threat domains
+  * Paginated, sorted by severity
+- POST /api/v1/threats/report
+  * Community threat submission
+  * Body: {domain, category, description}
+  * Rate limited: 10/hour per user
+- POST /api/v1/threats/vote/{threat_id}
+  * Upvote/downvote threat report
+  * Auto-verify at 10+ upvotes
+- GET /api/v1/threats/stats
+  * Total reports, verified threats, top categories
+
+FILE: backend/services/auth_service.py
+- Argon2id hashing:
+  * memory_cost=65536, time_cost=3, parallelism=4
+- JWT with RS256:
+  * Generate RSA keypair on startup (store in Replit Secrets)
+  * Access token: 15 minutes
+  * Refresh token: 7 days, single-use rotation
+- Zero IP logging in all auth functions
+
+FILE: backend/middleware/security.py
+Middleware to add these headers to ALL responses:
+- Strict-Transport-Security: max-age=31536000
+- X-Content-Type-Options: nosniff
+- X-Frame-Options: DENY
+- X-XSS-Protection: 1; mode=block
+- Content-Security-Policy: strict policy
+- Referrer-Policy: no-referrer
+- Permissions-Policy: camera=(), microphone=(), geolocation=()
+Strip all server identification headers.
+
+════════════════════════════════════════════
+PART 2 — FRONTEND DASHBOARD (React + Vite)
+════════════════════════════════════════════
+
+DESIGN SYSTEM:
+- Background: #0A0A0F
+- Surface: #12121A
+- Card: #1A1A26
+- Accent: #00E5FF (electric cyan)
+- Safe: #00FF87
+- Danger: #FF3B3B
+- Warning: #FFB800
+- Font: JetBrains Mono (Google Fonts)
+- All animations: CSS transitions + keyframes
+- No component library — pure custom CSS + React
+
+PAGE 1 — Dashboard.tsx:
+- Top stats row (4 cards):
+  * Total Trackers Blocked (all time, animated odometer)
+  * Domains in Blocklist
+  * Active Devices
+  * Threats Detected
+- Live threat feed (WebSocket or polling every 5s)
+- Blocked requests chart (last 24h, bar chart with recharts)
+- Top blocked categories pie chart
+- Recent blocked domains table (last 50)
+- Server status indicator (API health check)
+
+PAGE 2 — Blocklist.tsx:
+- Search bar to check if domain is blocked
+- Table of all custom domains user added
+- Add domain form
+- Import blocklist from URL
+- Category filter (ads, tracking, malware, social)
+- Export current blocklist as .txt
+
+PAGE 3 — Devices.tsx:
+- List all registered devices with:
+  * Device name, OS, last seen, data usage
+  * WireGuard public key (truncated)
+  * Status: online/offline
+- Add new device → generate WireGuard config
+- Show QR code of WireGuard config (qrcode library)
+- Revoke device button
+- Per-device blocked request count
+
+PAGE 4 — Threats.tsx:
+- Community threat reports feed
+- Submit new threat form
+- Voting buttons (upvote/downvote)
+- Verified threats badge
+- Filter by: category, severity, date
+- Export verified threats as hosts file
+
+PAGE 5 — Settings.tsx:
+- Account section: change password, delete account
+- API section: generate API key for Android app
+- Blocklist sources: manage upstream list URLs
+- Notifications: webhook URL for threat alerts
+- Danger zone: wipe all data button
+
+════════════════════════════════════════════
+PART 3 — REPLIT CONFIG FILES
+════════════════════════════════════════════
+
+FILE: .replit
+language = "python3"
+run = "python main.py"
+
+[nix]
+channel = "stable-23_11"
+
+[deployment]
+run = ["sh", "-c", "python main.py"]
+deploymentTarget = "cloudrun"
+
+[[ports]]
+localPort = 8000
+externalPort = 80
+
+[[ports]]
+localPort = 5173
+externalPort = 3000
+
+FILE: replit.nix
+Include system packages:
+- python311
+- nodejs_20
+- wireguard-tools (for key generation)
+- openssl
+
+FILE: main.py (entry point):
+import subprocess
+import threading
+
+def run_backend():
+    subprocess.run(["uvicorn", "backend.app:app",
+                   "--host", "0.0.0.0", "--port", "8000",
+                   "--workers", "2"])
+
+def run_frontend():
+    subprocess.run(["npm", "run", "dev", "--prefix", "frontend"])
+
+# Start both
+t1 = threading.Thread(target=run_backend)
+t2 = threading.Thread(target=run_frontend)
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+
+FILE: requirements.txt
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+sqlalchemy[asyncio]>=2.0.30
+asyncpg>=0.29.0
+argon2-cffi>=23.1.0
+python-jose[cryptography]>=3.3.0
+slowapi>=0.1.9
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+httpx>=0.27.0
+cryptography>=42.0.0
+python-multipart>=0.0.9
+redis>=5.0.0
+aiofiles>=23.2.1
+
+FILE: frontend/package.json
+Dependencies:
+- react 18, react-dom, react-router-dom v6
+- vite + @vitejs/plugin-react
+- recharts (charts)
+- qrcode.react (QR codes for WireGuard)
+- axios (HTTP client)
+- zustand (state management)
+- date-fns (date formatting)
+
+════════════════════════════════════════════
+PART 4 — SECURITY HARDENING
+════════════════════════════════════════════
+
+Implement ALL of these:
+[ ] Argon2id password hashing (never MD5/bcrypt/SHA)
+[ ] JWT RS256 asymmetric signing
+[ ] Refresh token rotation (invalidate on use)
+[ ] Rate limiting on all endpoints (slowapi)
+[ ] SQL injection prevention (SQLAlchemy ORM only)
+[ ] XSS prevention (CSP headers + input sanitization)
+[ ] CORS: allow only specific origins
+[ ] No sensitive data in logs
+[ ] No IP addresses stored in database
+[ ] Secrets only from Replit Secrets (os.environ)
+[ ] HTTPS enforced (Replit provides TLS)
+[ ] Security headers on all responses
+[ ] Input validation on all endpoints (Pydantic)
+[ ] Pagination on all list endpoints
+[ ] Error messages never expose internals
+
+════════════════════════════════════════════
+PART 5 — ANDROID CONNECTION GUIDE
+════════════════════════════════════════════
+
+Generate a complete guide (README.md) explaining:
+
+1. How the Android app connects to this Replit backend
+2. API base URL setup in Android (BuildConfig)
+3. Certificate pinning setup for Replit's domain
+4. WireGuard config import from API to Android
+5. Blocklist download + local caching on Android
+6. Authentication flow (register → login → store JWT)
+7. How to build Android app in Android Studio
+   pointing to this Replit backend URL
+
+════════════════════════════════════════════
+OUTPUT ORDER
+════════════════════════════════════════════
+Generate files in this exact order, completely:
+
+1. .replit
+2. replit.nix
+3. main.py
+4. requirements.txt
+5. backend/app.py
+6. backend/models/database.py
+7. backend/models/schemas.py
+8. backend/services/auth_service.py
+9. backend/services/vpn_service.py
+10. backend/services/blocklist_service.py
+11. backend/routers/auth.py
+12. backend/routers/vpn.py
+13. backend/routers/blocklist.py
+14. backend/routers/threats.py
+15. backend/middleware/security.py
+16. backend/middleware/rate_limit.py
+17. frontend/package.json
+18. frontend/vite.config.ts
+19. frontend/index.html
+20. frontend/src/main.tsx
+21. frontend/src/App.tsx
+22. frontend/src/lib/api.ts
+23. frontend/src/lib/auth.ts
+24. frontend/src/pages/Dashboard.tsx
+25. frontend/src/pages/Blocklist.tsx
+26. frontend/src/pages/Devices.tsx
+27. frontend/src/pages/Threats.tsx
+28. frontend/src/pages/Settings.tsx
+29. frontend/src/components/ (all components)
+30. README.md (Android connection guide)
+
+Write COMPLETE code for every file.
+No placeholders. No TODOs. Fully working.

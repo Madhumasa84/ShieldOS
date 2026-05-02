@@ -3,20 +3,30 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ShieldOS Privacy Backend API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: vpn
+    description: VPN device management
+  - name: blocklist
+    description: Domain blocklist management
+  - name: threats
+    description: Threat intelligence
+  - name: dashboard
+    description: Dashboard aggregates
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +34,850 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /v1/auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /v1/auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /v1/auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshBody"
+      responses:
+        "200":
+          description: Refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /v1/auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout and invalidate refresh token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshBody"
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /v1/auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user info
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  # VPN
+  /v1/vpn/provision:
+    post:
+      operationId: provisionDevice
+      tags: [vpn]
+      summary: Provision a new VPN device and generate WireGuard config
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProvisionDeviceBody"
+      responses:
+        "201":
+          description: Device provisioned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceProvisionResponse"
+
+  /v1/vpn/configs:
+    get:
+      operationId: listDevices
+      tags: [vpn]
+      summary: List all user devices
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Device list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceListResponse"
+
+  /v1/vpn/revoke/{deviceId}:
+    delete:
+      operationId: revokeDevice
+      tags: [vpn]
+      summary: Revoke a device's VPN access
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Device revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /v1/vpn/status:
+    get:
+      operationId: getVpnStatus
+      tags: [vpn]
+      summary: Get VPN server status
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: VPN status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VpnStatus"
+
+  # BLOCKLIST
+  /v1/blocklist/check:
+    post:
+      operationId: checkDomain
+      tags: [blocklist]
+      summary: Check if a domain is blocked
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckDomainBody"
+      responses:
+        "200":
+          description: Domain check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainCheckResponse"
+
+  /v1/blocklist/stats:
+    get:
+      operationId: getBlocklistStats
+      tags: [blocklist]
+      summary: Get blocklist stats (totals, by category)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Blocklist statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlocklistStats"
+
+  /v1/blocklist/custom:
+    get:
+      operationId: listCustomBlocklist
+      tags: [blocklist]
+      summary: List user's custom blocked domains
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [ads, tracking, malware, social, all]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Custom blocklist entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlocklistEntriesResponse"
+    post:
+      operationId: addCustomDomain
+      tags: [blocklist]
+      summary: Add a domain to user's custom blocklist
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddDomainBody"
+      responses:
+        "201":
+          description: Domain added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlocklistEntry"
+
+  /v1/blocklist/custom/{domain}:
+    delete:
+      operationId: removeCustomDomain
+      tags: [blocklist]
+      summary: Remove a domain from custom blocklist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Domain removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /v1/blocklist/blocked-requests:
+    get:
+      operationId: listBlockedRequests
+      tags: [blocklist]
+      summary: List recent blocked requests for the user's devices
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            default: 24
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Blocked requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlockedRequestsResponse"
+
+  # THREATS
+  /v1/threats/feed:
+    get:
+      operationId: getThreatFeed
+      tags: [threats]
+      summary: Get latest verified threats (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: verified
+          in: query
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Threat feed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThreatFeedResponse"
+
+  /v1/threats/report:
+    post:
+      operationId: reportThreat
+      tags: [threats]
+      summary: Submit a community threat report
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportThreatBody"
+      responses:
+        "201":
+          description: Threat reported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThreatReport"
+
+  /v1/threats/vote/{threatId}:
+    post:
+      operationId: voteThreat
+      tags: [threats]
+      summary: Upvote or downvote a threat report
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: threatId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoteBody"
+      responses:
+        "200":
+          description: Vote recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThreatReport"
+
+  /v1/threats/stats:
+    get:
+      operationId: getThreatStats
+      tags: [threats]
+      summary: Get threat intelligence statistics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Threat stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThreatStats"
+
+  # DASHBOARD
+  /v1/dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get overall privacy dashboard summary
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /v1/dashboard/blocked-chart:
+    get:
+      operationId: getBlockedChart
+      tags: [dashboard]
+      summary: Get blocked requests per hour for last 24h
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Hourly blocked requests chart data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlockedChartResponse"
+
+  /v1/dashboard/category-breakdown:
+    get:
+      operationId: getCategoryBreakdown
+      tags: [dashboard]
+      summary: Get blocked requests by category (pie chart data)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Category breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryBreakdownResponse"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    # AUTH
+    RegisterBody:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 32
+        password:
+          type: string
+          minLength: 8
+      required: [username, password]
+
+    LoginBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+
+    RefreshBody:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+      required: [refreshToken]
+
+    AuthResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+        username:
+          type: string
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+      required: [userId, username, accessToken, refreshToken]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+      required: [id, username, createdAt, isActive]
+
+    # VPN
+    ProvisionDeviceBody:
+      type: object
+      properties:
+        deviceName:
+          type: string
+          minLength: 1
+          maxLength: 64
+      required: [deviceName]
+
+    DeviceProvisionResponse:
+      type: object
+      properties:
+        device:
+          $ref: "#/components/schemas/Device"
+        configContent:
+          type: string
+          description: WireGuard .conf file content
+      required: [device, configContent]
+
+    Device:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        publicKey:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+        blockedCount:
+          type: integer
+      required: [id, name, publicKey, createdAt, isActive, blockedCount]
+
+    DeviceListResponse:
+      type: object
+      properties:
+        devices:
+          type: array
+          items:
+            $ref: "#/components/schemas/Device"
+        total:
+          type: integer
+      required: [devices, total]
+
+    VpnStatus:
+      type: object
+      properties:
+        activeDevices:
+          type: integer
+        totalDevices:
+          type: integer
+        serverUptime:
+          type: string
+      required: [activeDevices, totalDevices, serverUptime]
+
+    # BLOCKLIST
+    CheckDomainBody:
+      type: object
+      properties:
+        domain:
+          type: string
+      required: [domain]
+
+    DomainCheckResponse:
+      type: object
+      properties:
+        domain:
+          type: string
+        blocked:
+          type: boolean
+        category:
+          type: string
+        source:
+          type: string
+      required: [domain, blocked, category, source]
+
+    BlocklistEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        domain:
+          type: string
+        category:
+          type: string
+        source:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+      required: [id, domain, category, source, addedAt]
+
+    BlocklistEntriesResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/BlocklistEntry"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required: [entries, total, page, limit]
+
+    AddDomainBody:
+      type: object
+      properties:
+        domain:
+          type: string
+        category:
+          type: string
+          enum: [ads, tracking, malware, social]
+          default: tracking
+      required: [domain]
+
+    BlocklistStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        byCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+      required: [total, byCategory]
+
+    CategoryCount:
+      type: object
+      properties:
+        category:
+          type: string
+        count:
+          type: integer
+      required: [category, count]
+
+    BlockedRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        domain:
+          type: string
+        category:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        deviceId:
+          type: integer
+        deviceName:
+          type: string
+      required: [id, domain, category, timestamp, deviceId, deviceName]
+
+    BlockedRequestsResponse:
+      type: object
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/BlockedRequest"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required: [requests, total, page, limit]
+
+    # THREATS
+    ThreatReport:
+      type: object
+      properties:
+        id:
+          type: integer
+        domain:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        votes:
+          type: integer
+        verified:
+          type: boolean
+        reportedAt:
+          type: string
+          format: date-time
+        userVote:
+          type: integer
+          description: "1 for upvote, -1 for downvote, 0 for no vote"
+      required: [id, domain, category, description, votes, verified, reportedAt, userVote]
+
+    ThreatFeedResponse:
+      type: object
+      properties:
+        threats:
+          type: array
+          items:
+            $ref: "#/components/schemas/ThreatReport"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required: [threats, total, page, limit]
+
+    ReportThreatBody:
+      type: object
+      properties:
+        domain:
+          type: string
+        category:
+          type: string
+          enum: [malware, phishing, tracking, adware, spyware, ransomware, other]
+        description:
+          type: string
+          maxLength: 500
+      required: [domain, category, description]
+
+    VoteBody:
+      type: object
+      properties:
+        vote:
+          type: integer
+          enum: [1, -1]
+      required: [vote]
+
+    ThreatStats:
+      type: object
+      properties:
+        totalReports:
+          type: integer
+        verifiedThreats:
+          type: integer
+        pendingReview:
+          type: integer
+        topCategories:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+      required: [totalReports, verifiedThreats, pendingReview, topCategories]
+
+    # DASHBOARD
+    DashboardSummary:
+      type: object
+      properties:
+        trackersBlockedTotal:
+          type: integer
+        domainsInBlocklist:
+          type: integer
+        activeDevices:
+          type: integer
+        threatsDetected:
+          type: integer
+        blockedLast24h:
+          type: integer
+        topBlockedDomain:
+          type: string
+      required:
+        [
+          trackersBlockedTotal,
+          domainsInBlocklist,
+          activeDevices,
+          threatsDetected,
+          blockedLast24h,
+          topBlockedDomain,
+        ]
+
+    BlockedChartDataPoint:
+      type: object
+      properties:
+        hour:
+          type: string
+        count:
+          type: integer
+      required: [hour, count]
+
+    BlockedChartResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BlockedChartDataPoint"
+      required: [data]
+
+    CategoryBreakdownItem:
+      type: object
+      properties:
+        category:
+          type: string
+        count:
+          type: integer
+        percentage:
+          type: number
+      required: [category, count, percentage]
+
+    CategoryBreakdownResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryBreakdownItem"
+      required: [data]
