@@ -59,6 +59,15 @@ lib/
 - Parses hosts-format files, categorizes domains (ads/tracking/malware/social)
 - Bulk upserts in batches of 500 with ON CONFLICT DO UPDATE
 
+## Export Features
+
+- **PDF Report** — `GET /api/v1/export/report/pdf`: 30-day report with stats, bar chart, category breakdown, top 20 domains, active devices list. Uses pdfkit (marked external in esbuild).
+- **Hosts File** — `GET /api/v1/export/blocklist/hosts`: full combined blocklist (custom + system, 83k+ domains) in `0.0.0.0 domain` format.
+- **CSV Export** — `GET /api/v1/export/blocklist/csv`: domain, category, source, added_at columns.
+- **Device Config Re-download** — `GET /api/v1/devices/:deviceId/config`: regenerates WireGuard `.conf` from stored private key; only if device belongs to requesting user.
+- **ZIP Data Export** — `GET /api/v1/export/all`: profile.json, devices.json, custom_blocklist.json, custom_blocklist.csv, blocked_requests.json.
+- **Delete Account** — `DELETE /api/v1/export/account`: permanently wipes user + all cascaded data (devices, blocklist, blocked requests, refresh tokens).
+
 ## API Routes (all under /api)
 
 - `/v1/auth/register` — creates user-role account; returns `{ userId, username, role, accessToken, refreshToken }`

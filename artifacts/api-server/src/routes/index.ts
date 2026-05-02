@@ -8,6 +8,7 @@ import dashboardRouter from "./dashboard";
 import logRouter from "./log";
 import statsRouter from "./stats";
 import adminRouter from "./admin";
+import exportRouter from "./export";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(dashboardRouter);
 router.use(logRouter);
 router.use(statsRouter);
 router.use(adminRouter);
+router.use(exportRouter);
 
 export default router;

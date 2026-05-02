@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { User, Activity, Clock, Users, ShieldCheck, RefreshCw, Ban, ChevronUp, ChevronDown, KeyRound, Copy, Check } from "lucide-react";
+import { User, Activity, Clock, Users, ShieldCheck, RefreshCw, Ban, ChevronUp, ChevronDown, KeyRound, Copy, Check, FileDown, Trash2, AlertTriangle, Loader2, Package } from "lucide-react";
 import { format } from "date-fns";
 import { getAuthToken, isAdmin as checkIsAdmin } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 interface AdminUser {
   id: number;
@@ -259,9 +261,54 @@ export default function Settings() {
   const token = getAuthToken();
   const isAdminUser = checkIsAdmin();
   const [activeTab, setActiveTab] = useState<"profile" | "users">("profile");
+  const [exportingZip, setExportingZip] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const { toast } = useToast();
+
   const { data: user, isLoading } = useGetMe({
     query: { queryKey: ["me"], enabled: !!token },
   });
+
+  const handleExportAll = async () => {
+    setExportingZip(true);
+    try {
+      const res = await fetch("/api/v1/export/all", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.download = `ShieldOS-Data-${dateStr}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Export Complete", description: "Your data archive has been downloaded." });
+    } catch {
+      toast({ title: "Export Failed", description: "Could not export data.", variant: "destructive" });
+    } finally {
+      setExportingZip(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/v1/export/account", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Deletion failed");
+      localStorage.clear();
+      window.location.href = "/login";
+    } catch {
+      toast({ title: "Deletion Failed", description: "Could not delete account.", variant: "destructive" });
+      setDeleting(false);
+    }
+  };
 
   const tabs = [
     { id: "profile" as const, label: "Profile", icon: User },
@@ -299,75 +346,173 @@ export default function Settings() {
 
         {/* Profile Tab */}
         {activeTab === "profile" && (
-          <Card className="border-primary/20 shadow-[0_0_15px_rgba(0,229,255,0.05)] bg-card/50">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <User className="w-5 h-5 text-primary" />
-                Operator Profile
-              </CardTitle>
-              <CardDescription>Current session authentication details.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {isLoading ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-12 w-full bg-primary/10" />
-                  <Skeleton className="h-12 w-full bg-primary/10" />
-                  <Skeleton className="h-12 w-full bg-primary/10" />
+          <div className="space-y-6">
+            <Card className="border-primary/20 shadow-[0_0_15px_rgba(0,229,255,0.05)] bg-card/50">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <User className="w-5 h-5 text-primary" />
+                  Operator Profile
+                </CardTitle>
+                <CardDescription>Current session authentication details.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {isLoading ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-12 w-full bg-primary/10" />
+                    <Skeleton className="h-12 w-full bg-primary/10" />
+                    <Skeleton className="h-12 w-full bg-primary/10" />
+                  </div>
+                ) : user ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-background p-4 rounded-md border border-border">
+                      <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Operator ID</div>
+                      <div className="font-bold text-lg">{user.username}</div>
+                    </div>
+                    <div className="bg-background p-4 rounded-md border border-border">
+                      <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">System ID</div>
+                      <div className="font-mono text-primary">#{user.id.toString().padStart(6, "0")}</div>
+                    </div>
+                    <div className="bg-background p-4 rounded-md border border-border">
+                      <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3" /> Access Level
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(user as any).role === "admin" ? (
+                          <span className="text-primary font-bold font-mono">ADMIN</span>
+                        ) : (
+                          <span className="text-muted-foreground font-mono">USER</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="bg-background p-4 rounded-md border border-border">
+                      <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Provisioned At
+                      </div>
+                      <div className="font-mono text-sm">
+                        {format(new Date(user.createdAt), "yyyy-MM-dd HH:mm:ss")}
+                      </div>
+                    </div>
+                    <div className="bg-background p-4 rounded-md border border-border md:col-span-2">
+                      <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider flex items-center gap-1">
+                        <Activity className="w-3 h-3" /> Status
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            user.isActive
+                              ? "bg-primary shadow-[0_0_8px_var(--primary)]"
+                              : "bg-muted"
+                          }`}
+                        />
+                        <span className={user.isActive ? "text-primary font-bold" : "text-muted-foreground"}>
+                          {user.isActive ? "ACTIVE" : "SUSPENDED"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground">Unable to retrieve operator data.</div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Data Management */}
+            <Card className="border-border bg-card/50">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Package className="w-5 h-5 text-muted-foreground" />
+                  Data Management
+                </CardTitle>
+                <CardDescription>Export or permanently delete your account data.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Export all data */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-md bg-background border border-border">
+                  <div>
+                    <div className="font-semibold text-sm">Export All Data</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Download a ZIP archive containing your profile, devices, custom blocklist, and blocked request log.
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 shrink-0 border-primary/30 text-primary hover:bg-primary/10"
+                    onClick={handleExportAll}
+                    disabled={exportingZip}
+                  >
+                    {exportingZip ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <FileDown className="w-4 h-4" />
+                    )}
+                    {exportingZip ? "Preparing..." : "Export ZIP"}
+                  </Button>
                 </div>
-              ) : user ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-background p-4 rounded-md border border-border">
-                    <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Operator ID</div>
-                    <div className="font-bold text-lg">{user.username}</div>
-                  </div>
-                  <div className="bg-background p-4 rounded-md border border-border">
-                    <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">System ID</div>
-                    <div className="font-mono text-primary">#{user.id.toString().padStart(6, "0")}</div>
-                  </div>
-                  <div className="bg-background p-4 rounded-md border border-border">
-                    <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" /> Access Level
+
+                {/* Delete account */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-md bg-destructive/5 border border-destructive/20">
+                  <div>
+                    <div className="font-semibold text-sm text-destructive flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4" />
+                      Delete All My Data
                     </div>
-                    <div className="flex items-center gap-2">
-                      {(user as any).role === "admin" ? (
-                        <span className="text-primary font-bold font-mono">ADMIN</span>
-                      ) : (
-                        <span className="text-muted-foreground font-mono">USER</span>
-                      )}
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Permanently wipe your account, all devices, blocklist entries, and request logs. This cannot be undone.
                     </div>
                   </div>
-                  <div className="bg-background p-4 rounded-md border border-border">
-                    <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> Provisioned At
-                    </div>
-                    <div className="font-mono text-sm">
-                      {format(new Date(user.createdAt), "yyyy-MM-dd HH:mm:ss")}
-                    </div>
-                  </div>
-                  <div className="bg-background p-4 rounded-md border border-border md:col-span-2">
-                    <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider flex items-center gap-1">
-                      <Activity className="w-3 h-3" /> Status
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          user.isActive
-                            ? "bg-primary shadow-[0_0_8px_var(--primary)]"
-                            : "bg-muted"
-                        }`}
-                      />
-                      <span className={user.isActive ? "text-primary font-bold" : "text-muted-foreground"}>
-                        {user.isActive ? "ACTIVE" : "SUSPENDED"}
-                      </span>
-                    </div>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 shrink-0 border-destructive/40 text-destructive hover:bg-destructive hover:text-white"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Account
+                  </Button>
                 </div>
-              ) : (
-                <div className="text-muted-foreground">Unable to retrieve operator data.</div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         )}
+
+        {/* Delete confirmation dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={(o) => { setShowDeleteDialog(o); setDeleteConfirm(""); }}>
+          <DialogContent className="bg-card border-destructive/40 shadow-[0_0_40px_rgba(255,77,77,0.1)]">
+            <DialogHeader>
+              <DialogTitle className="text-destructive flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                Permanent Data Deletion
+              </DialogTitle>
+              <DialogDescription>
+                This will permanently delete your account, all VPN devices, custom blocklist rules, and the entire request log.
+                Type your username <span className="font-mono text-foreground font-bold">{user?.username}</span> to confirm.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-2">
+              <Input
+                placeholder="Type your username to confirm"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                className="font-mono border-destructive/30 bg-background"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setShowDeleteDialog(false); setDeleteConfirm(""); }}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteConfirm !== user?.username || deleting}
+                onClick={handleDeleteAccount}
+                className="gap-2"
+              >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {deleting ? "Deleting..." : "Delete Everything"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Users Tab (admin only) */}
         {activeTab === "users" && isAdminUser && (

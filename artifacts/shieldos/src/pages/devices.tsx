@@ -4,7 +4,8 @@ import { useListDevices, useProvisionDevice, useRevokeDevice, useGetVpnStatus, g
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MonitorSmartphone, Plus, ShieldOff, Key, Download, Check, AlertTriangle, Activity } from "lucide-react";
+import { MonitorSmartphone, Plus, ShieldOff, Key, Download, Check, AlertTriangle, Activity, RefreshCw } from "lucide-react";
+import { getAuthToken } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ export default function Devices() {
   const [newDeviceName, setNewDeviceName] = useState("");
   const [configContent, setConfigContent] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -55,6 +57,31 @@ export default function Devices() {
         toast({ title: "Revocation Failed", description: err.message, variant: "destructive" });
       }
     });
+  };
+
+  const handleRedownloadConfig = async (deviceId: number, name: string) => {
+    setDownloadingId(deviceId);
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`/api/v1/devices/${deviceId}/config`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        toast({ title: "Download Failed", description: "Could not retrieve config.", variant: "destructive" });
+        return;
+      }
+      const text = await res.text();
+      const blob = new Blob([text], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${name.replace(/[^a-zA-Z0-9-_]/g, "_")}.conf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Config Downloaded", description: `${name}.conf saved.` });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const copyConfig = () => {
@@ -192,6 +219,20 @@ export default function Devices() {
                             <div className="text-[10px] uppercase text-muted-foreground">Provisioned</div>
                             <div className="font-mono text-xs">{format(new Date(device.createdAt), 'MM/dd/yy')}</div>
                           </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-primary/30 text-primary hover:bg-primary/10"
+                            onClick={() => handleRedownloadConfig(device.id, device.name)}
+                            disabled={downloadingId === device.id}
+                            title="Re-download WireGuard config"
+                          >
+                            {downloadingId === device.id ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                          </Button>
                           <Button 
                             variant="outline" 
                             size="sm" 

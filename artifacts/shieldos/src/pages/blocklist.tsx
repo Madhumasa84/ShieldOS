@@ -28,6 +28,8 @@ import {
   AlertCircle,
   Loader2,
   Globe,
+  FileDown,
+  FileText,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -190,6 +192,21 @@ export default function Blocklist() {
   const isRunning = syncStatus?.status === "running" || stats?.syncStatus === "running";
   const totalDomains = (stats?.total ?? 0) + (stats?.systemTotal ?? 0);
 
+  const handleExport = async (type: "hosts" | "csv") => {
+    const res = await fetch(`/api/v1/export/blocklist/${type}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = type === "hosts" ? `shieldos-blocklist-${dateStr}.txt` : `shieldos-blocklist-${dateStr}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <AppShell>
       <div className="space-y-6">
@@ -202,7 +219,7 @@ export default function Blocklist() {
               System-wide threat domains + custom interception rules.
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
             <input
               type="file"
               accept=".txt"
@@ -218,6 +235,24 @@ export default function Blocklist() {
             >
               <Upload className="w-4 h-4" />
               Import .txt
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-border hover:border-primary/40"
+              onClick={() => handleExport("hosts")}
+            >
+              <FileDown className="w-4 h-4" />
+              Hosts File
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-border hover:border-primary/40"
+              onClick={() => handleExport("csv")}
+            >
+              <FileText className="w-4 h-4" />
+              Export CSV
             </Button>
             <Button
               variant="outline"

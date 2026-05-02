@@ -5,6 +5,7 @@ import {
   getGetStatsDashboardQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Shield,
   ShieldAlert,
@@ -15,7 +16,10 @@ import {
   TrendingUp,
   Clock,
   Wifi,
+  FileDown,
+  Loader2,
 } from "lucide-react";
+import { getAuthToken } from "@/lib/auth";
 import {
   BarChart,
   Bar,
@@ -83,6 +87,28 @@ function AnimatedNumber({
 export default function Dashboard() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [secondsAgo, setSecondsAgo] = useState(0);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const token = getAuthToken();
+      const res = await fetch("/api/v1/export/report/pdf", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.download = `ShieldOS-Report-${dateStr}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   const { data: stats, isLoading } = useGetStatsDashboard({
     query: {
@@ -132,14 +158,30 @@ export default function Dashboard() {
               Network telemetry and interception statistics.
             </p>
           </div>
-          {lastUpdated && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono bg-muted/30 border border-border rounded-lg px-3 py-2 shrink-0">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Updated {formatSecondsAgo(secondsAgo)}</span>
-              <span className="text-border">·</span>
-              <span className="text-primary/60">auto-refreshes every 30s</span>
-            </div>
-          )}
+          <div className="flex items-center gap-3 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-primary/30 text-primary hover:bg-primary/10 font-mono uppercase text-xs tracking-wider"
+              onClick={handleExportPdf}
+              disabled={exportingPdf}
+            >
+              {exportingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileDown className="w-4 h-4" />
+              )}
+              {exportingPdf ? "Generating..." : "Export Report"}
+            </Button>
+            {lastUpdated && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono bg-muted/30 border border-border rounded-lg px-3 py-2">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Updated {formatSecondsAgo(secondsAgo)}</span>
+                <span className="text-border">·</span>
+                <span className="text-primary/60">auto-refreshes every 30s</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Stats Grid */}
