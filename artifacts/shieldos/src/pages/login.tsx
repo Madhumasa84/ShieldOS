@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useLogin } from "@workspace/api-client-react";
-import { setAuthToken, setRefreshToken, setUserRole } from "@/lib/auth";
+import { setAuthenticated } from "@/lib/auth";
 import { ShieldAlert, Terminal, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,9 +33,7 @@ export default function Login() {
       { data },
       {
         onSuccess: (res) => {
-          setAuthToken(res.accessToken);
-          setRefreshToken(res.refreshToken);
-          setUserRole((res as any).role ?? "user");
+          setAuthenticated((res as any).role ?? "user");
           toast({ title: "Access Granted", description: "Session established." });
           setLocation("/dashboard");
         },

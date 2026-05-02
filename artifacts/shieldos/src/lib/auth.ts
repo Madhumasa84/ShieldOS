@@ -1,21 +1,5 @@
-export function getAuthToken() {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("shieldos_access_token");
-  }
-  return null;
-}
-
-export function setAuthToken(token: string) {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("shieldos_access_token", token);
-  }
-}
-
-export function setRefreshToken(token: string) {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("shieldos_refresh_token", token);
-  }
-}
+// Tokens are stored in httpOnly cookies set by the server.
+// This module manages non-sensitive session metadata kept in localStorage.
 
 export function setUserRole(role: string) {
   if (typeof window !== "undefined") {
@@ -36,12 +20,21 @@ export function isAdmin(): boolean {
 
 export function clearTokens() {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("shieldos_access_token");
-    localStorage.removeItem("shieldos_refresh_token");
     localStorage.removeItem("shieldos_role");
+    localStorage.removeItem("shieldos_authenticated");
+  }
+}
+
+export function setAuthenticated(role: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("shieldos_role", role);
+    localStorage.setItem("shieldos_authenticated", "1");
   }
 }
 
 export function isAuthenticated() {
-  return !!getAuthToken();
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("shieldos_authenticated") === "1";
+  }
+  return false;
 }

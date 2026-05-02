@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User, Activity, Clock, Users, ShieldCheck, RefreshCw, Ban, ChevronUp, ChevronDown, KeyRound, Copy, Check, FileDown, Trash2, AlertTriangle, Loader2, Package } from "lucide-react";
 import { format } from "date-fns";
-import { getAuthToken, isAdmin as checkIsAdmin } from "@/lib/auth";
+import { isAdmin as checkIsAdmin, isAuthenticated, clearTokens } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -26,15 +26,13 @@ function useAdminUsers(enabled: boolean) {
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const token = getAuthToken();
 
   const fetch = async () => {
-    if (!token) return;
     setLoading(true);
     setError(null);
     try {
       const res = await window.fetch("/api/v1/admin/users", {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to load users");
       const data = await res.json();
@@ -60,14 +58,14 @@ function RoleBadge({ role }: { role: string }) {
 function AdminUsersTab() {
   const { users, loading, error, refetch } = useAdminUsers(true);
   const { toast } = useToast();
-  const token = getAuthToken();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
   const callApi = async (path: string, method: string, body?: object) => {
     const res = await window.fetch(`/api${path}`, {
       method,
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: body ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) {
@@ -258,7 +256,6 @@ function AdminUsersTab() {
 }
 
 export default function Settings() {
-  const token = getAuthToken();
   const isAdminUser = checkIsAdmin();
   const [activeTab, setActiveTab] = useState<"profile" | "users">("profile");
   const [exportingZip, setExportingZip] = useState(false);
@@ -268,14 +265,14 @@ export default function Settings() {
   const { toast } = useToast();
 
   const { data: user, isLoading } = useGetMe({
-    query: { queryKey: ["me"], enabled: !!token },
+    query: { queryKey: ["me"], enabled: isAuthenticated() },
   });
 
   const handleExportAll = async () => {
     setExportingZip(true);
     try {
       const res = await fetch("/api/v1/export/all", {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
@@ -299,10 +296,10 @@ export default function Settings() {
     try {
       const res = await fetch("/api/v1/export/account", {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Deletion failed");
-      localStorage.clear();
+      clearTokens();
       window.location.href = "/login";
     } catch {
       toast({ title: "Deletion Failed", description: "Could not delete account.", variant: "destructive" });

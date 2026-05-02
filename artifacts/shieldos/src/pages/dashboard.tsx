@@ -19,7 +19,6 @@ import {
   FileDown,
   Loader2,
 } from "lucide-react";
-import { getAuthToken } from "@/lib/auth";
 import {
   BarChart,
   Bar,
@@ -92,9 +91,8 @@ export default function Dashboard() {
   const handleExportPdf = async () => {
     setExportingPdf(true);
     try {
-      const token = getAuthToken();
       const res = await fetch("/api/v1/export/report/pdf", {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();

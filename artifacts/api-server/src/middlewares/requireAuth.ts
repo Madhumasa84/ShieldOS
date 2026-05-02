@@ -8,12 +8,23 @@ export interface AuthRequest extends Request {
 }
 
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
+  // Cookie-first: httpOnly `at` cookie for browser clients
+  // Fallback to Authorization header for Android / non-browser clients
+  const cookieToken = (req as any).cookies?.at as string | undefined;
   const authHeader = req.headers["authorization"];
-  if (!authHeader?.startsWith("Bearer ")) {
+
+  let token: string | undefined;
+  if (cookieToken) {
+    token = cookieToken;
+  } else if (authHeader?.startsWith("Bearer ")) {
+    token = authHeader.slice(7);
+  }
+
+  if (!token) {
     res.status(401).json({ message: "Unauthorized" });
     return;
   }
-  const token = authHeader.slice(7);
+
   try {
     const payload = verifyAccessToken(token);
     req.userId = payload.userId;

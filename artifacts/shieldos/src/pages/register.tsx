@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useRegister } from "@workspace/api-client-react";
-import { setAuthToken, setRefreshToken, setUserRole } from "@/lib/auth";
+import { setAuthenticated } from "@/lib/auth";
 import { ShieldAlert, Terminal, Lock, User, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,9 +70,7 @@ export default function Register() {
       { data: { username: data.username, password: data.password } },
       {
         onSuccess: (res) => {
-          setAuthToken(res.accessToken);
-          setRefreshToken(res.refreshToken);
-          setUserRole((res as any).role ?? "user");
+          setAuthenticated((res as any).role ?? "user");
           toast({ title: "Profile Created", description: "Welcome to ShieldOS." });
           setLocation("/dashboard");
         },

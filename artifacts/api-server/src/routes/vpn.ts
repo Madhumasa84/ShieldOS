@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { devicesTable, blockedRequestsTable } from "@workspace/db";
 import { requireAuth, AuthRequest } from "../middlewares/requireAuth";
@@ -84,7 +84,12 @@ router.get("/v1/vpn/configs", requireAuth, async (req: AuthRequest, res) => {
       blockedRequestsTable,
       eq(blockedRequestsTable.deviceId, devicesTable.id)
     )
-    .where(eq(devicesTable.userId, req.userId!))
+    .where(
+      and(
+        eq(devicesTable.userId, req.userId!),
+        eq(devicesTable.isActive, true)
+      )
+    )
     .groupBy(devicesTable.id);
 
   res.json({ devices, total: devices.length });

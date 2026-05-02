@@ -10,9 +10,34 @@ import {
   getRefreshExpiresAt,
 } from "../lib/auth";
 import { requireAuth, AuthRequest } from "../middlewares/requireAuth";
-import { RegisterBody, LoginBody, RefreshTokenBody, LogoutBody } from "@workspace/api-zod";
+import { RegisterBody, LoginBody } from "@workspace/api-zod";
 
 const router = Router();
+
+const isProduction = process.env["NODE_ENV"] === "production";
+
+const ACCESS_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: "lax" as const,
+  maxAge: 15 * 60 * 1000,
+  path: "/",
+};
+
+const REFRESH_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: "lax" as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: "/",
+};
+
+const CLEAR_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: "lax" as const,
+  path: "/",
+};
 
 router.post("/v1/auth/register", async (req, res) => {
   const parse = RegisterBody.safeParse(req.body);
@@ -51,6 +76,9 @@ router.post("/v1/auth/register", async (req, res) => {
     token: refreshToken,
     expiresAt: getRefreshExpiresAt(),
   });
+
+  res.cookie("at", accessToken, ACCESS_COOKIE_OPTS);
+  res.cookie("rt", refreshToken, REFRESH_COOKIE_OPTS);
 
   res.status(201).json({
     userId: user.id,
@@ -99,6 +127,9 @@ router.post("/v1/auth/login", async (req, res) => {
     expiresAt: getRefreshExpiresAt(),
   });
 
+  res.cookie("at", accessToken, ACCESS_COOKIE_OPTS);
+  res.cookie("rt", refreshToken, REFRESH_COOKIE_OPTS);
+
   res.json({
     userId: user.id,
     username: user.username,
@@ -109,12 +140,15 @@ router.post("/v1/auth/login", async (req, res) => {
 });
 
 router.post("/v1/auth/refresh", async (req, res) => {
-  const parse = RefreshTokenBody.safeParse(req.body);
-  if (!parse.success) {
-    res.status(400).json({ message: "Invalid input" });
+  // Accept refresh token from httpOnly cookie or request body (backward compat)
+  const cookieToken = (req as any).cookies?.rt as string | undefined;
+  const bodyToken = req.body?.refreshToken as string | undefined;
+  const refreshToken = cookieToken || bodyToken;
+
+  if (!refreshToken) {
+    res.status(401).json({ message: "Invalid or expired refresh token" });
     return;
   }
-  const { refreshToken } = parse.data;
 
   const [stored] = await db
     .select()
@@ -157,6 +191,9 @@ router.post("/v1/auth/refresh", async (req, res) => {
     expiresAt: getRefreshExpiresAt(),
   });
 
+  res.cookie("at", newAccessToken, ACCESS_COOKIE_OPTS);
+  res.cookie("rt", newRefreshToken, REFRESH_COOKIE_OPTS);
+
   res.json({
     userId: user.id,
     username: user.username,
@@ -167,17 +204,20 @@ router.post("/v1/auth/refresh", async (req, res) => {
 });
 
 router.post("/v1/auth/logout", requireAuth, async (req: AuthRequest, res) => {
-  const parse = LogoutBody.safeParse(req.body);
-  if (!parse.success) {
-    res.status(400).json({ message: "Invalid input" });
-    return;
-  }
-  const { refreshToken } = parse.data;
-  await db
-    .update(refreshTokensTable)
-    .set({ revokedAt: new Date() })
-    .where(eq(refreshTokensTable.token, refreshToken));
+  // Accept refresh token from cookie or body
+  const cookieToken = (req as any).cookies?.rt as string | undefined;
+  const bodyToken = req.body?.refreshToken as string | undefined;
+  const refreshToken = cookieToken || bodyToken;
 
+  if (refreshToken) {
+    await db
+      .update(refreshTokensTable)
+      .set({ revokedAt: new Date() })
+      .where(eq(refreshTokensTable.token, refreshToken));
+  }
+
+  res.clearCookie("at", CLEAR_COOKIE_OPTS);
+  res.clearCookie("rt", CLEAR_COOKIE_OPTS);
   res.json({ message: "Logged out" });
 });
 

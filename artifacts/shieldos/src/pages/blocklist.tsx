@@ -71,8 +71,6 @@ export default function Blocklist() {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const token = localStorage.getItem("shieldos_access_token");
-
   const { data: stats, refetch: refetchStats } = useGetBlocklistStats({
     query: { queryKey: getGetBlocklistStatsQueryKey() },
   });
@@ -171,7 +169,7 @@ export default function Blocklist() {
     try {
       const res = await fetch("/api/v1/blocklist/import", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
         body: formData,
       });
       const data = await res.json();
@@ -194,7 +192,7 @@ export default function Blocklist() {
 
   const handleExport = async (type: "hosts" | "csv") => {
     const res = await fetch(`/api/v1/export/blocklist/${type}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
     });
     if (!res.ok) return;
     const blob = await res.blob();

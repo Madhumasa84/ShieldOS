@@ -18,8 +18,9 @@ export function Sidebar() {
   const isAdmin = role === "admin";
 
   const handleLogout = () => {
+    // Refresh token is in httpOnly cookie; server reads it automatically
     logoutMutation.mutate(
-      { data: { refreshToken: localStorage.getItem("shieldos_refresh_token") || "" } },
+      { data: { refreshToken: "" } },
       {
         onSettled: () => {
           clearTokens();

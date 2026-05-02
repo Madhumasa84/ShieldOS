@@ -349,15 +349,10 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
-  // Attach bearer token when an auth getter is configured and no
-  // Authorization header has been explicitly provided.
+  // Attach bearer token when an explicit auth getter is configured (e.g. Android/Expo).
+  // Browser clients rely on httpOnly cookies — no manual token injection needed.
   if (_authTokenGetter && !headers.has("authorization")) {
     const token = await _authTokenGetter();
-    if (token) {
-      headers.set("authorization", `Bearer ${token}`);
-    }
-  } else if (!headers.has("authorization") && typeof window !== "undefined") {
-    const token = localStorage.getItem("shieldos_access_token");
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
@@ -365,12 +360,11 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  // `credentials: "include"` ensures httpOnly auth cookies are sent with every request
+  const response = await fetch(input, { ...init, method, headers, credentials: "include" });
 
   if (!response.ok) {
     if (response.status === 401 && typeof window !== "undefined") {
-      localStorage.removeItem("shieldos_access_token");
-      localStorage.removeItem("shieldos_refresh_token");
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";
       }

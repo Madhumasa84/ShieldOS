@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MonitorSmartphone, Plus, ShieldOff, Key, Download, Check, AlertTriangle, Activity, RefreshCw } from "lucide-react";
-import { getAuthToken } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -62,9 +61,8 @@ export default function Devices() {
   const handleRedownloadConfig = async (deviceId: number, name: string) => {
     setDownloadingId(deviceId);
     try {
-      const token = getAuthToken();
       const res = await fetch(`/api/v1/devices/${deviceId}/config`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!res.ok) {
         toast({ title: "Download Failed", description: "Could not retrieve config.", variant: "destructive" });
