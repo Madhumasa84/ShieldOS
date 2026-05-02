@@ -207,7 +207,7 @@ paths:
     post:
       operationId: checkDomain
       tags: [blocklist]
-      summary: Check if a domain is blocked
+      summary: Check if a domain is blocked (checks both custom and system blocklist)
       security:
         - bearerAuth: []
       requestBody:
@@ -228,7 +228,7 @@ paths:
     get:
       operationId: getBlocklistStats
       tags: [blocklist]
-      summary: Get blocklist stats (totals, by category)
+      summary: Get blocklist stats (custom + system totals, sync info)
       security:
         - bearerAuth: []
       responses:
@@ -309,6 +309,74 @@ paths:
       responses:
         "200":
           description: Domain removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /v1/blocklist/system:
+    get:
+      operationId: listSystemBlocklist
+      tags: [blocklist]
+      summary: List system-wide blocked domains (from synced blocklists)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: System blocklist entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemBlocklistResponse"
+
+  /v1/blocklist/sync-status:
+    get:
+      operationId: getSyncStatus
+      tags: [blocklist]
+      summary: Get the latest blocklist sync status
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sync status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncStatusResponse"
+
+  /v1/blocklist/sync:
+    post:
+      operationId: triggerSync
+      tags: [blocklist]
+      summary: Manually trigger a blocklist sync
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sync started
           content:
             application/json:
               schema:
@@ -646,6 +714,9 @@ components:
           type: string
         source:
           type: string
+        addedAt:
+          type: string
+          nullable: true
       required: [domain, blocked, category, source]
 
     BlocklistEntry:
@@ -679,6 +750,37 @@ components:
           type: integer
       required: [entries, total, page, limit]
 
+    SystemBlocklistEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        domain:
+          type: string
+        category:
+          type: string
+        source:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+      required: [id, domain, category, source, addedAt]
+
+    SystemBlocklistResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemBlocklistEntry"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required: [entries, total, page, limit]
+
     AddDomainBody:
       type: object
       properties:
@@ -699,7 +801,40 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CategoryCount"
-      required: [total, byCategory]
+        systemTotal:
+          type: integer
+        systemByCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+        lastSyncAt:
+          type: string
+          format: date-time
+          nullable: true
+        syncStatus:
+          type: string
+      required: [total, byCategory, systemTotal, systemByCategory, syncStatus]
+
+    SyncStatusResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+        totalDomains:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        error:
+          type: string
+          nullable: true
+      required: [id, status, totalDomains, startedAt]
 
     CategoryCount:
       type: object

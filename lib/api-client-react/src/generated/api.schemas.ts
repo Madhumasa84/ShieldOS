@@ -89,6 +89,7 @@ export interface DomainCheckResponse {
   blocked: boolean;
   category: string;
   source: string;
+  addedAt?: string | null;
 }
 
 export interface BlocklistEntry {
@@ -101,6 +102,21 @@ export interface BlocklistEntry {
 
 export interface BlocklistEntriesResponse {
   entries: BlocklistEntry[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface SystemBlocklistEntry {
+  id: number;
+  domain: string;
+  category: string;
+  source: string;
+  addedAt: string;
+}
+
+export interface SystemBlocklistResponse {
+  entries: SystemBlocklistEntry[];
   total: number;
   page: number;
   limit: number;
@@ -129,6 +145,19 @@ export interface CategoryCount {
 export interface BlocklistStats {
   total: number;
   byCategory: CategoryCount[];
+  systemTotal: number;
+  systemByCategory: CategoryCount[];
+  lastSyncAt?: string | null;
+  syncStatus: string;
+}
+
+export interface SyncStatusResponse {
+  id: number;
+  status: string;
+  totalDomains: number;
+  startedAt: string;
+  completedAt?: string | null;
+  error?: string | null;
 }
 
 export interface BlockedRequest {
@@ -249,6 +278,14 @@ export const ListCustomBlocklistCategory = {
   social: "social",
   all: "all",
 } as const;
+
+export type ListSystemBlocklistParams = {
+  category?: string;
+  search?: string;
+  source?: string;
+  page?: number;
+  limit?: number;
+};
 
 export type ListBlockedRequestsParams = {
   hours?: number;

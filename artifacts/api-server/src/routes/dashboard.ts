@@ -6,6 +6,7 @@ import {
   blockedRequestsTable,
   devicesTable,
   threatReportsTable,
+  systemBlocklistTable,
 } from "@workspace/db";
 import { requireAuth, AuthRequest } from "../middlewares/requireAuth";
 
@@ -22,21 +23,26 @@ router.get("/v1/dashboard/summary", requireAuth, async (req: AuthRequest, res) =
 
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  const [domainsResult, threatsResult] = await Promise.all([
+  // Count both custom user domains AND system blocklist for total
+  const [customDomainsResult, systemDomainsResult, threatsResult] = await Promise.all([
     db
       .select({ count: count() })
       .from(blocklistEntriesTable)
       .where(eq(blocklistEntriesTable.userId, req.userId!)),
+    db.select({ count: count() }).from(systemBlocklistTable),
     db
       .select({ count: count() })
       .from(threatReportsTable)
       .where(eq(threatReportsTable.verified, true)),
   ]);
 
+  const totalDomains =
+    (customDomainsResult[0]?.count ?? 0) + (systemDomainsResult[0]?.count ?? 0);
+
   if (deviceIds.length === 0) {
     res.json({
       trackersBlockedTotal: 0,
-      domainsInBlocklist: domainsResult[0]?.count ?? 0,
+      domainsInBlocklist: totalDomains,
       activeDevices,
       threatsDetected: threatsResult[0]?.count ?? 0,
       blockedLast24h: 0,
@@ -72,7 +78,7 @@ router.get("/v1/dashboard/summary", requireAuth, async (req: AuthRequest, res) =
 
   res.json({
     trackersBlockedTotal: totalBlocked[0]?.count ?? 0,
-    domainsInBlocklist: domainsResult[0]?.count ?? 0,
+    domainsInBlocklist: totalDomains,
     activeDevices,
     threatsDetected: threatsResult[0]?.count ?? 0,
     blockedLast24h: blockedLast24h[0]?.count ?? 0,

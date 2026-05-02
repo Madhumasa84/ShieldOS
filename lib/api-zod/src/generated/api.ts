@@ -127,7 +127,7 @@ export const GetVpnStatusResponse = zod.object({
 });
 
 /**
- * @summary Check if a domain is blocked
+ * @summary Check if a domain is blocked (checks both custom and system blocklist)
  */
 export const CheckDomainBody = zod.object({
   domain: zod.string(),
@@ -138,10 +138,11 @@ export const CheckDomainResponse = zod.object({
   blocked: zod.boolean(),
   category: zod.string(),
   source: zod.string(),
+  addedAt: zod.string().nullish(),
 });
 
 /**
- * @summary Get blocklist stats (totals, by category)
+ * @summary Get blocklist stats (custom + system totals, sync info)
  */
 export const GetBlocklistStatsResponse = zod.object({
   total: zod.number(),
@@ -151,6 +152,15 @@ export const GetBlocklistStatsResponse = zod.object({
       count: zod.number(),
     }),
   ),
+  systemTotal: zod.number(),
+  systemByCategory: zod.array(
+    zod.object({
+      category: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  lastSyncAt: zod.coerce.date().nullish(),
+  syncStatus: zod.string(),
 });
 
 /**
@@ -203,6 +213,54 @@ export const RemoveCustomDomainParams = zod.object({
 });
 
 export const RemoveCustomDomainResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary List system-wide blocked domains (from synced blocklists)
+ */
+export const listSystemBlocklistQueryPageDefault = 1;
+export const listSystemBlocklistQueryLimitDefault = 50;
+
+export const ListSystemBlocklistQueryParams = zod.object({
+  category: zod.coerce.string().optional(),
+  search: zod.coerce.string().optional(),
+  source: zod.coerce.string().optional(),
+  page: zod.coerce.number().default(listSystemBlocklistQueryPageDefault),
+  limit: zod.coerce.number().default(listSystemBlocklistQueryLimitDefault),
+});
+
+export const ListSystemBlocklistResponse = zod.object({
+  entries: zod.array(
+    zod.object({
+      id: zod.number(),
+      domain: zod.string(),
+      category: zod.string(),
+      source: zod.string(),
+      addedAt: zod.coerce.date(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  limit: zod.number(),
+});
+
+/**
+ * @summary Get the latest blocklist sync status
+ */
+export const GetSyncStatusResponse = zod.object({
+  id: zod.number(),
+  status: zod.string(),
+  totalDomains: zod.number(),
+  startedAt: zod.coerce.date(),
+  completedAt: zod.coerce.date().nullish(),
+  error: zod.string().nullish(),
+});
+
+/**
+ * @summary Manually trigger a blocklist sync
+ */
+export const TriggerSyncResponse = zod.object({
   message: zod.string(),
 });
 

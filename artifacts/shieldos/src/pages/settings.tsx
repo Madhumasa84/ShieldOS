@@ -10,6 +10,7 @@ export default function Settings() {
   const token = getAuthToken();
   const { data: user, isLoading } = useGetMe({
     query: {
+      queryKey: ["me"],
       enabled: !!token,
     },
   });

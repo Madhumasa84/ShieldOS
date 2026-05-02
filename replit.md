@@ -18,6 +18,7 @@ Full-stack privacy backend + admin dashboard for an Android privacy app that blo
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui
 - **Auth**: bcryptjs (password hashing) + jsonwebtoken (JWT, HS256)
 - **Charts**: Recharts
+- **File upload**: multer (memoryStorage, 50MB limit)
 
 ## Architecture
 
@@ -37,24 +38,42 @@ lib/
 - `users` — username + bcrypt password hash
 - `refresh_tokens` — JWT refresh token rotation
 - `devices` — WireGuard VPN devices per user
-- `blocklist_entries` — custom domain blocklist
+- `blocklist_entries` — custom domain blocklist (per-user)
 - `blocked_requests` — log of blocked tracker requests
 - `threat_reports` — community threat intelligence
 - `threat_votes` — user upvote/downvote on threats
+- `system_blocklist` — 80k+ domains from StevenBlack/AdAway (auto-synced)
+- `blocklist_sync_status` — sync run history (status, total, timestamps)
+
+## Blocklist Engine
+
+- `startBlocklistSyncScheduler()` fires on server startup, then every 24h
+- Sources: StevenBlack hosts (83k domains), AdAway (6.5k domains)
+- Parses hosts-format files, categorizes domains (ads/tracking/malware/social)
+- Bulk upserts in batches of 500 with ON CONFLICT DO UPDATE
+- Manual trigger via `POST /v1/blocklist/sync`
+- File import via `POST /v1/blocklist/import` (multipart, hosts format)
 
 ## API Routes (all under /api)
 
 - `/v1/auth/*` — register, login, refresh, logout, me
 - `/v1/vpn/*` — provision device, list configs, revoke, status
-- `/v1/blocklist/*` — check domain, stats, list/add/remove custom domains, blocked requests
+- `/v1/blocklist/check` — check domain against custom + system blocklist
+- `/v1/blocklist/stats` — custom + system counts, sync status
+- `/v1/blocklist/custom` — list/add/remove custom user domains
+- `/v1/blocklist/system` — paginated system blocklist (search/filter)
+- `/v1/blocklist/sync-status` — latest sync run details
+- `/v1/blocklist/sync` — trigger manual sync (POST)
+- `/v1/blocklist/import` — upload hosts .txt file (POST, multipart)
+- `/v1/blocklist/blocked-requests` — blocked request log
 - `/v1/threats/*` — feed, report, vote, stats
-- `/v1/dashboard/*` — summary, blocked chart (24h), category breakdown
+- `/v1/dashboard/*` — summary (includes system domain count), blocked chart, category breakdown
 
 ## Frontend Pages
 
 - `/login` — Terminal-style auth (register/login)
 - `/dashboard` — Stats overview, blocked chart, category pie
-- `/blocklist` — Domain search, custom blocklist management
+- `/blocklist` — System tab (83k+ domains, search/filter/paginate) + Custom tab (add/remove/import)
 - `/devices` — WireGuard VPN device management + config generation
 - `/threats` — Community threat feed with voting
 - `/settings` — Account info
