@@ -385,6 +385,51 @@ export const GetThreatStatsResponse = zod.object({
 });
 
 /**
+ * @summary Log a DNS request from an Android device, returns blocked status
+ */
+export const LogRequestBody = zod.object({
+  device_id: zod.number(),
+  domain: zod.string(),
+  timestamp: zod.coerce.date().optional(),
+});
+
+export const LogRequestResponse = zod.object({
+  blocked: zod.boolean(),
+  category: zod.string(),
+});
+
+/**
+ * @summary Comprehensive live dashboard stats (single call)
+ */
+export const GetStatsDashboardResponse = zod.object({
+  trackers_blocked_today: zod.number(),
+  trackers_blocked_total: zod.number(),
+  domains_in_blocklist: zod.number(),
+  active_devices: zod.number(),
+  online_devices: zod.number(),
+  threats_detected: zod.number(),
+  blocked_by_hour: zod.array(
+    zod.object({
+      hour: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  blocked_by_category: zod.array(
+    zod.object({
+      category: zod.string(),
+      count: zod.number(),
+      percentage: zod.number(),
+    }),
+  ),
+  top_blocked_domains: zod.array(
+    zod.object({
+      domain: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+});
+
+/**
  * @summary Get overall privacy dashboard summary
  */
 export const GetDashboardSummaryResponse = zod.object({

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -28,7 +28,8 @@ export const blockedRequestsTable = pgTable("blocked_requests", {
     .notNull()
     .references(() => devicesTable.id, { onDelete: "cascade" }),
   domain: text("domain").notNull(),
-  category: text("category").notNull().default("tracking"),
+  category: text("category").notNull().default("unknown"),
+  wasBlocked: boolean("was_blocked").notNull().default(true),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
 });
 

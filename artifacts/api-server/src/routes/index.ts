@@ -5,6 +5,8 @@ import vpnRouter from "./vpn";
 import blocklistRouter from "./blocklist";
 import threatsRouter from "./threats";
 import dashboardRouter from "./dashboard";
+import logRouter from "./log";
+import statsRouter from "./stats";
 
 const router: IRouter = Router();
 
@@ -14,5 +16,7 @@ router.use(vpnRouter);
 router.use(blocklistRouter);
 router.use(threatsRouter);
 router.use(dashboardRouter);
+router.use(logRouter);
+router.use(statsRouter);
 
 export default router;

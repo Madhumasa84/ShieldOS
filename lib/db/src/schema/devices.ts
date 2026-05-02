@@ -13,6 +13,7 @@ export const devicesTable = pgTable("devices", {
   privateKeyEncrypted: text("private_key_encrypted").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   isActive: boolean("is_active").notNull().default(true),
+  lastSeen: timestamp("last_seen"),
 });
 
 export const insertDeviceSchema = createInsertSchema(devicesTable).omit({

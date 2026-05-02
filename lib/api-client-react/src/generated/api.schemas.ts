@@ -261,6 +261,40 @@ export interface CategoryBreakdownResponse {
   data: CategoryBreakdownItem[];
 }
 
+export interface LogRequestBody {
+  device_id: number;
+  domain: string;
+  timestamp?: string;
+}
+
+export interface LogRequestResponse {
+  blocked: boolean;
+  category: string;
+}
+
+export interface TopBlockedDomain {
+  domain: string;
+  count: number;
+}
+
+export interface StatsDashboardCategoryItem {
+  category: string;
+  count: number;
+  percentage: number;
+}
+
+export interface StatsDashboard {
+  trackers_blocked_today: number;
+  trackers_blocked_total: number;
+  domains_in_blocklist: number;
+  active_devices: number;
+  online_devices: number;
+  threats_detected: number;
+  blocked_by_hour: BlockedChartDataPoint[];
+  blocked_by_category: StatsDashboardCategoryItem[];
+  top_blocked_domains: TopBlockedDomain[];
+}
+
 export type ListCustomBlocklistParams = {
   category?: ListCustomBlocklistCategory;
   search?: string;

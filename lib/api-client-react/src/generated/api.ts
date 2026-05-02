@@ -35,12 +35,15 @@ import type {
   ListBlockedRequestsParams,
   ListCustomBlocklistParams,
   ListSystemBlocklistParams,
+  LogRequestBody,
+  LogRequestResponse,
   LoginBody,
   MessageResponse,
   ProvisionDeviceBody,
   RefreshBody,
   RegisterBody,
   ReportThreatBody,
+  StatsDashboard,
   SyncStatusResponse,
   SystemBlocklistResponse,
   ThreatFeedResponse,
@@ -1995,6 +1998,167 @@ export function useGetThreatStats<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetThreatStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Log a DNS request from an Android device, returns blocked status
+ */
+export const getLogRequestUrl = () => {
+  return `/api/v1/log/request`;
+};
+
+export const logRequest = async (
+  logRequestBody: LogRequestBody,
+  options?: RequestInit,
+): Promise<LogRequestResponse> => {
+  return customFetch<LogRequestResponse>(getLogRequestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(logRequestBody),
+  });
+};
+
+export const getLogRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof logRequest>>,
+    TError,
+    { data: BodyType<LogRequestBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof logRequest>>,
+  TError,
+  { data: BodyType<LogRequestBody> },
+  TContext
+> => {
+  const mutationKey = ["logRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof logRequest>>,
+    { data: BodyType<LogRequestBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return logRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LogRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof logRequest>>
+>;
+export type LogRequestMutationBody = BodyType<LogRequestBody>;
+export type LogRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Log a DNS request from an Android device, returns blocked status
+ */
+export const useLogRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof logRequest>>,
+    TError,
+    { data: BodyType<LogRequestBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof logRequest>>,
+  TError,
+  { data: BodyType<LogRequestBody> },
+  TContext
+> => {
+  return useMutation(getLogRequestMutationOptions(options));
+};
+
+/**
+ * @summary Comprehensive live dashboard stats (single call)
+ */
+export const getGetStatsDashboardUrl = () => {
+  return `/api/v1/stats/dashboard`;
+};
+
+export const getStatsDashboard = async (
+  options?: RequestInit,
+): Promise<StatsDashboard> => {
+  return customFetch<StatsDashboard>(getGetStatsDashboardUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStatsDashboardQueryKey = () => {
+  return [`/api/v1/stats/dashboard`] as const;
+};
+
+export const getGetStatsDashboardQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStatsDashboard>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStatsDashboard>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStatsDashboardQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getStatsDashboard>>
+  > = ({ signal }) => getStatsDashboard({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStatsDashboard>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStatsDashboardQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStatsDashboard>>
+>;
+export type GetStatsDashboardQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Comprehensive live dashboard stats (single call)
+ */
+
+export function useGetStatsDashboard<
+  TData = Awaited<ReturnType<typeof getStatsDashboard>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStatsDashboard>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStatsDashboardQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

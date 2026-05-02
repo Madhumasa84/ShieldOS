@@ -37,12 +37,12 @@ lib/
 
 - `users` — username + bcrypt password hash
 - `refresh_tokens` — JWT refresh token rotation
-- `devices` — WireGuard VPN devices per user
+- `devices` — WireGuard VPN devices per user (`last_seen` tracks device activity)
 - `blocklist_entries` — custom domain blocklist (per-user)
-- `blocked_requests` — log of blocked tracker requests
+- `blocked_requests` — full DNS query log: `device_id`, `domain`, `category`, `was_blocked`, `timestamp`
 - `threat_reports` — community threat intelligence
 - `threat_votes` — user upvote/downvote on threats
-- `system_blocklist` — 80k+ domains from StevenBlack/AdAway (auto-synced)
+- `system_blocklist` — 83k+ domains from StevenBlack/AdAway (auto-synced)
 - `blocklist_sync_status` — sync run history (status, total, timestamps)
 
 ## Blocklist Engine
@@ -51,8 +51,6 @@ lib/
 - Sources: StevenBlack hosts (83k domains), AdAway (6.5k domains)
 - Parses hosts-format files, categorizes domains (ads/tracking/malware/social)
 - Bulk upserts in batches of 500 with ON CONFLICT DO UPDATE
-- Manual trigger via `POST /v1/blocklist/sync`
-- File import via `POST /v1/blocklist/import` (multipart, hosts format)
 
 ## API Routes (all under /api)
 
@@ -66,17 +64,28 @@ lib/
 - `/v1/blocklist/sync` — trigger manual sync (POST)
 - `/v1/blocklist/import` — upload hosts .txt file (POST, multipart)
 - `/v1/blocklist/blocked-requests` — blocked request log
+- `/v1/log/request` — Android DNS query logger: checks blocklist, logs result, updates device last_seen
+- `/v1/stats/dashboard` — single comprehensive live stats endpoint (auto-refreshed by frontend)
 - `/v1/threats/*` — feed, report, vote, stats
-- `/v1/dashboard/*` — summary (includes system domain count), blocked chart, category breakdown
+- `/v1/dashboard/*` — legacy summary, blocked chart (24h), category breakdown
 
 ## Frontend Pages
 
 - `/login` — Terminal-style auth (register/login)
-- `/dashboard` — Stats overview, blocked chart, category pie
-- `/blocklist` — System tab (83k+ domains, search/filter/paginate) + Custom tab (add/remove/import)
+- `/dashboard` — Live stats (auto-refresh 30s, animated counters, "last updated" badge), hourly chart, category pie, top 10 blocked domains, session report
+- `/blocklist` — System tab (83k+ domains) + Custom tab (add/remove/import)
 - `/devices` — WireGuard VPN device management + config generation
 - `/threats` — Community threat feed with voting
 - `/settings` — Account info
+
+## Android Integration
+
+The Android app should call `POST /api/v1/log/request` for every DNS query:
+```json
+{ "device_id": 1, "domain": "example.com", "timestamp": "2024-01-01T00:00:00Z" }
+```
+Response: `{ "blocked": true, "category": "ads" }`
+This logs the query, returns the block decision, and updates the device's `last_seen`.
 
 ## Demo Credentials
 
