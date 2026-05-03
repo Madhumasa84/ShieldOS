@@ -12,6 +12,7 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Setup from "@/pages/setup";
 import ApiDocs from "@/pages/api-docs";
+import NotificationsPage from "@/pages/notifications";
 import Dashboard from "@/pages/dashboard";
 import Blocklist from "@/pages/blocklist";
 import Devices from "@/pages/devices";
@@ -194,6 +195,7 @@ function Router() {
         <ProtectedRoute path="/settings" component={Settings} />
         <ProtectedRoute path="/setup" component={Setup} />
         <ProtectedRoute path="/api-docs" component={ApiDocs} />
+        <ProtectedRoute path="/notifications" component={NotificationsPage} />
 
         <Route component={NotFound} />
       </Switch>

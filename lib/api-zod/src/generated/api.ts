@@ -528,6 +528,158 @@ export const GetCategoryBreakdownResponse = zod.object({
 });
 
 /**
+ * @summary List notifications (paginated, filterable)
+ */
+export const listNotificationsQueryPageDefault = 1;
+export const listNotificationsQueryLimitDefault = 20;
+
+export const ListNotificationsQueryParams = zod.object({
+  page: zod.coerce.number().default(listNotificationsQueryPageDefault),
+  limit: zod.coerce.number().default(listNotificationsQueryLimitDefault),
+  type: zod.coerce.string().optional(),
+  severity: zod.coerce.string().optional(),
+  read: zod.coerce.string().optional(),
+});
+
+export const ListNotificationsResponse = zod.object({
+  notifications: zod.array(
+    zod.object({
+      id: zod.number(),
+      userId: zod.number(),
+      type: zod.string(),
+      severity: zod.string(),
+      title: zod.string(),
+      message: zod.string(),
+      data: zod.object({}).passthrough().nullish(),
+      read: zod.boolean(),
+      link: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  limit: zod.number(),
+});
+
+/**
+ * @summary Delete all notifications
+ */
+export const DeleteAllNotificationsResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary Get unread notification count
+ */
+export const GetUnreadCountResponse = zod.object({
+  count: zod.number(),
+});
+
+/**
+ * @summary Mark all notifications as read
+ */
+export const MarkAllNotificationsReadResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary Mark a single notification as read
+ */
+export const MarkNotificationReadParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MarkNotificationReadResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary List alert rules for current user
+ */
+export const ListAlertRulesResponse = zod.object({
+  rules: zod.array(
+    zod.object({
+      id: zod.number(),
+      userId: zod.number(),
+      ruleType: zod.string(),
+      thresholdValue: zod.number(),
+      thresholdWindowMinutes: zod.number(),
+      channel: zod.string(),
+      webhookUrl: zod.string().nullish(),
+      enabled: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Create a new alert rule
+ */
+export const CreateAlertRuleBody = zod.object({
+  rule_type: zod.string(),
+  threshold_value: zod.number().optional(),
+  threshold_window_minutes: zod.number().optional(),
+  channel: zod.string().optional(),
+  webhook_url: zod.string().optional(),
+});
+
+/**
+ * @summary Update an alert rule (toggle enabled, change settings)
+ */
+export const UpdateAlertRuleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateAlertRuleBody = zod.object({
+  enabled: zod.boolean().optional(),
+  webhook_url: zod.string().optional(),
+  threshold_value: zod.number().optional(),
+  threshold_window_minutes: zod.number().optional(),
+  channel: zod.string().optional(),
+});
+
+export const UpdateAlertRuleResponse = zod.object({
+  rule: zod.object({
+    id: zod.number(),
+    userId: zod.number(),
+    ruleType: zod.string(),
+    thresholdValue: zod.number(),
+    thresholdWindowMinutes: zod.number(),
+    channel: zod.string(),
+    webhookUrl: zod.string().nullish(),
+    enabled: zod.boolean(),
+    createdAt: zod.coerce.date(),
+  }),
+});
+
+/**
+ * @summary Delete an alert rule
+ */
+export const DeleteAlertRuleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteAlertRuleResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary Send a test payload to a webhook URL
+ */
+export const TestWebhookBody = zod.object({
+  url: zod.string(),
+});
+
+export const TestWebhookResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary Create a test in-app notification (dev helper)
+ */
+export const CreateTestNotificationResponse = zod.object({}).passthrough();
+
+/**
  * @summary Register an Android device and receive its device token + WireGuard config
  */
 export const AndroidRegisterBody = zod.object({

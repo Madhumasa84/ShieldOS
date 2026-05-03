@@ -297,6 +297,76 @@ export interface CategoryBreakdownResponse {
   data: CategoryBreakdownItem[];
 }
 
+export interface OkResponse {
+  ok: boolean;
+}
+
+export type NotificationItemData = { [key: string]: unknown } | null;
+
+export interface NotificationItem {
+  id: number;
+  userId: number;
+  type: string;
+  severity: string;
+  title: string;
+  message: string;
+  data?: NotificationItemData;
+  read: boolean;
+  link?: string | null;
+  createdAt: string;
+}
+
+export interface NotificationListResponse {
+  notifications: NotificationItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface UnreadCountResponse {
+  count: number;
+}
+
+export interface AlertRuleItem {
+  id: number;
+  userId: number;
+  ruleType: string;
+  thresholdValue: number;
+  thresholdWindowMinutes: number;
+  channel: string;
+  webhookUrl?: string | null;
+  enabled: boolean;
+  createdAt: string;
+}
+
+export interface AlertRuleListResponse {
+  rules: AlertRuleItem[];
+}
+
+export interface AlertRuleResponse {
+  rule: AlertRuleItem;
+}
+
+export interface CreateAlertRuleBody {
+  rule_type: string;
+  threshold_value?: number;
+  threshold_window_minutes?: number;
+  channel?: string;
+  webhook_url?: string;
+}
+
+export interface UpdateAlertRuleBody {
+  enabled?: boolean;
+  webhook_url?: string;
+  threshold_value?: number;
+  threshold_window_minutes?: number;
+  channel?: string;
+}
+
+export interface WebhookTestBody {
+  url: string;
+}
+
 export interface AndroidRegisterBody {
   device_name: string;
   android_version?: string;
@@ -488,3 +558,13 @@ export type GetThreatFeedParams = {
   page?: number;
   limit?: number;
 };
+
+export type ListNotificationsParams = {
+  page?: number;
+  limit?: number;
+  type?: string;
+  severity?: string;
+  read?: string;
+};
+
+export type CreateTestNotification200 = { [key: string]: unknown };

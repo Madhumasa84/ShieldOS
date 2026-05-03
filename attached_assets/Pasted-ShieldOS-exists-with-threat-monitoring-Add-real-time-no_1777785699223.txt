@@ -1,0 +1,74 @@
+ShieldOS exists with threat monitoring.
+Add real-time notifications and alerts system.
+
+════════════════════════════════════════════
+ADD — NOTIFICATIONS + ALERTS
+════════════════════════════════════════════
+
+1. ALERT RULES ENGINE:
+Table: alert_rules
+- id, user_id, rule_type, threshold,
+  channel, enabled, created_at
+
+Rule types:
+- THREAT_SPIKE: X threats in Y minutes
+- NEW_DEVICE: any new device registered
+- BLOCKLIST_UPDATED: sync completed
+- DEVICE_OFFLINE: device not seen in X hours
+- HIGH_BLOCK_RATE: block rate exceeds X%
+
+2. NOTIFICATION CHANNELS:
+a) In-app notifications:
+   - Bell icon in dashboard header
+   - Red badge with unread count
+   - Dropdown shows last 20 notifications
+   - Mark as read / mark all read
+   - Click → navigates to relevant page
+
+b) Webhook notifications:
+   POST /api/v1/notifications/webhook/test
+   Send test payload to configured webhook URL
+   Payload format:
+   {
+     "event": "THREAT_SPIKE",
+     "severity": "HIGH",
+     "message": "892 threats detected in last hour",
+     "timestamp": "ISO datetime",
+     "data": { ... event specific data }
+   }
+
+c) Email notifications (optional, if SMTP configured):
+   - Uses nodemailer
+   - SMTP config in Settings
+   - Clean HTML email template
+   - Unsubscribe link in every email
+
+3. NOTIFICATION CENTER (frontend):
+New page /notifications:
+- Full notification history (paginated)
+- Filter by: type, severity, date, read/unread
+- Bulk actions: mark all read, delete all
+- Alert rules management:
+  * List existing rules
+  * Create new rule (form)
+  * Toggle enable/disable per rule
+  * Delete rule
+
+4. REAL-TIME NOTIFICATIONS:
+- WebSocket endpoint: /ws/notifications
+- Push new alerts instantly to dashboard
+- Toast popup (top-right) for new alerts
+- Auto-dismiss after 5 seconds
+- Click toast → opens full notification
+
+5. THREAT SEVERITY SCORING:
+Automatically score each threat event:
+- CRITICAL (score 90-100): known malware/ransomware domain
+- HIGH (score 70-89): phishing/scam domain
+- MEDIUM (score 40-69): aggressive tracking
+- LOW (score 0-39): general ads/analytics
+
+Show severity badge on threat feed.
+Color code: red/orange/yellow/grey.
+
+Add all to OpenAPI spec + React Query hooks.

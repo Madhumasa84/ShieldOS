@@ -22,6 +22,8 @@ tags:
     description: Dashboard aggregates
   - name: admin
     description: Admin user management
+  - name: notifications
+    description: In-app notifications, alert rules, and webhooks
   - name: android
     description: Android app API bridge
   - name: dns
@@ -691,6 +693,226 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CategoryBreakdownResponse"
+
+  # NOTIFICATIONS
+  /v1/notifications/stream:
+    get:
+      operationId: getNotificationStream
+      tags: [notifications]
+      summary: SSE stream — real-time notification push
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: SSE text/event-stream
+
+  /v1/notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications (paginated, filterable)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: type
+          in: query
+          schema: { type: string }
+        - name: severity
+          in: query
+          schema: { type: string }
+        - name: read
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationListResponse"
+    delete:
+      operationId: deleteAllNotifications
+      tags: [notifications]
+      summary: Delete all notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /v1/notifications/unread-count:
+    get:
+      operationId: getUnreadCount
+      tags: [notifications]
+      summary: Get unread notification count
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCountResponse"
+
+  /v1/notifications/read-all:
+    patch:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /v1/notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a single notification as read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /v1/notifications/rules:
+    get:
+      operationId: listAlertRules
+      tags: [notifications]
+      summary: List alert rules for current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Alert rules
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertRuleListResponse"
+    post:
+      operationId: createAlertRule
+      tags: [notifications]
+      summary: Create a new alert rule
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAlertRuleBody"
+      responses:
+        "201":
+          description: Rule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertRuleResponse"
+
+  /v1/notifications/rules/{id}:
+    patch:
+      operationId: updateAlertRule
+      tags: [notifications]
+      summary: Update an alert rule (toggle enabled, change settings)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAlertRuleBody"
+      responses:
+        "200":
+          description: Updated rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertRuleResponse"
+    delete:
+      operationId: deleteAlertRule
+      tags: [notifications]
+      summary: Delete an alert rule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /v1/notifications/webhook/test:
+    post:
+      operationId: testWebhook
+      tags: [notifications]
+      summary: Send a test payload to a webhook URL
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookTestBody"
+      responses:
+        "200":
+          description: Delivered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /v1/notifications/test:
+    post:
+      operationId: createTestNotification
+      tags: [notifications]
+      summary: Create a test in-app notification (dev helper)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Test notification created
+          content:
+            application/json:
+              schema:
+                type: object
 
   # ANDROID BRIDGE
   /v1/android/register:
@@ -1443,6 +1665,141 @@ components:
           items:
             $ref: "#/components/schemas/CategoryBreakdownItem"
       required: [data]
+
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required: [ok]
+
+    # NOTIFICATIONS
+    NotificationItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+        severity:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          nullable: true
+        read:
+          type: boolean
+        link:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, type, severity, title, message, read, createdAt]
+
+    NotificationListResponse:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationItem"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required: [notifications, total, page, limit]
+
+    UnreadCountResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+      required: [count]
+
+    AlertRuleItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        ruleType:
+          type: string
+        thresholdValue:
+          type: integer
+        thresholdWindowMinutes:
+          type: integer
+        channel:
+          type: string
+        webhookUrl:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, ruleType, thresholdValue, thresholdWindowMinutes, channel, enabled, createdAt]
+
+    AlertRuleListResponse:
+      type: object
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlertRuleItem"
+      required: [rules]
+
+    AlertRuleResponse:
+      type: object
+      properties:
+        rule:
+          $ref: "#/components/schemas/AlertRuleItem"
+      required: [rule]
+
+    CreateAlertRuleBody:
+      type: object
+      properties:
+        rule_type:
+          type: string
+        threshold_value:
+          type: integer
+        threshold_window_minutes:
+          type: integer
+        channel:
+          type: string
+        webhook_url:
+          type: string
+      required: [rule_type]
+
+    UpdateAlertRuleBody:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        webhook_url:
+          type: string
+        threshold_value:
+          type: integer
+        threshold_window_minutes:
+          type: integer
+        channel:
+          type: string
+
+    WebhookTestBody:
+      type: object
+      properties:
+        url:
+          type: string
+      required: [url]
 
     # ANDROID
     AndroidRegisterBody:

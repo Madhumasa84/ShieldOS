@@ -6,11 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShieldAlert, ThumbsUp, ThumbsDown, CheckCircle2, AlertOctagon, Send, Activity } from "lucide-react";
+import { ShieldAlert, ThumbsUp, ThumbsDown, CheckCircle2, AlertOctagon, Send, Activity, Skull, Flame, Eye, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+
+function getSeverity(category: string): { label: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"; score: number; style: string; icon: React.ReactNode } {
+  switch (category) {
+    case "ransomware": return { label: "CRITICAL", score: 98, style: "text-red-500 bg-red-500/10 border-red-500/40", icon: <Skull className="w-3 h-3" /> };
+    case "malware":    return { label: "CRITICAL", score: 95, style: "text-red-500 bg-red-500/10 border-red-500/40", icon: <Skull className="w-3 h-3" /> };
+    case "spyware":    return { label: "HIGH",     score: 82, style: "text-orange-400 bg-orange-400/10 border-orange-400/40", icon: <Eye className="w-3 h-3" /> };
+    case "phishing":   return { label: "HIGH",     score: 78, style: "text-orange-400 bg-orange-400/10 border-orange-400/40", icon: <Flame className="w-3 h-3" /> };
+    case "tracking":   return { label: "MEDIUM",   score: 55, style: "text-yellow-400 bg-yellow-400/10 border-yellow-400/40", icon: <TrendingUp className="w-3 h-3" /> };
+    case "adware":     return { label: "LOW",       score: 25, style: "text-muted-foreground bg-muted/10 border-border", icon: null };
+    default:           return { label: "LOW",       score: 20, style: "text-muted-foreground bg-muted/10 border-border", icon: null };
+  }
+}
 
 export default function Threats() {
   const [domain, setDomain] = useState("");
@@ -203,13 +215,23 @@ export default function Threats() {
                         
                         <div className="flex-1 space-y-2">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-mono font-bold text-lg">{threat.domain}</span>
                               {threat.verified && (
                                 <Badge variant="destructive" className="uppercase text-[10px] tracking-wider flex items-center gap-1">
                                   <CheckCircle2 className="w-3 h-3" /> Verified
                                 </Badge>
                               )}
+                              {(() => {
+                                const sev = getSeverity(threat.category);
+                                return (
+                                  <Badge variant="outline" className={`text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 border ${sev.style}`}>
+                                    {sev.icon}
+                                    {sev.label}
+                                    <span className="opacity-60 ml-0.5 font-normal">{sev.score}</span>
+                                  </Badge>
+                                );
+                              })()}
                             </div>
                             <Badge variant="outline" className="border-primary text-primary capitalize">{threat.category}</Badge>
                           </div>

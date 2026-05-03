@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Shield, ShieldAlert, MonitorSmartphone, Settings, LogOut, Smartphone, BookOpen } from "lucide-react";
+import { LayoutDashboard, Shield, ShieldAlert, MonitorSmartphone, Settings, LogOut, Smartphone, BookOpen, Bell } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 import { clearTokens, getUserRole } from "@/lib/auth";
 
@@ -8,6 +8,7 @@ const navItems = [
   { href: "/blocklist", label: "Blocklist", icon: Shield },
   { href: "/devices", label: "Devices", icon: MonitorSmartphone },
   { href: "/threats", label: "Threat Feed", icon: ShieldAlert },
+  { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/setup", label: "Android Setup", icon: Smartphone },
   { href: "/api-docs", label: "API Docs", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },

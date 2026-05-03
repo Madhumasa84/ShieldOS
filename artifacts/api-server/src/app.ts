@@ -12,6 +12,7 @@ import {
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { startBlocklistSyncScheduler } from "./services/blocklist-sync";
+import { startAlertEngine } from "./services/alert-engine";
 
 const app: Express = express();
 
@@ -60,5 +61,8 @@ app.use("/api", router);
 
 // Start blocklist sync scheduler (fires immediately on startup, then every 24h)
 startBlocklistSyncScheduler();
+
+// Start alert engine (checks DEVICE_OFFLINE, THREAT_SPIKE every 5 minutes)
+startAlertEngine();
 
 export default app;

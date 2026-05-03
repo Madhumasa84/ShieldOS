@@ -11,6 +11,7 @@ import adminRouter from "./admin";
 import exportRouter from "./export";
 import androidRouter from "./android";
 import dnsRouter from "./dns";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(adminRouter);
 router.use(exportRouter);
 router.use(androidRouter);
 router.use(dnsRouter);
+router.use(notificationsRouter);
 
 export default router;
