@@ -1,6 +1,8 @@
 {
-  "name": "workspace",
-  "version": "0.0.0",
+  "name": "shieldos",
+  "version": "1.0.0",
+  "description": "Self-hosted privacy backend + admin dashboard for Android. Blocks ads, trackers, and malware at the DNS level.",
+  "author": "Madhusudhanan G <137139824+Madhumasa84@users.noreply.github.com> (https://github.com/Madhumasa84)",
   "license": "MIT",
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",

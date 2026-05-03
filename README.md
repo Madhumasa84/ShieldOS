@@ -9,26 +9,40 @@ ShieldOS is an open-source, self-hosted privacy backend + admin dashboard for An
 ## Features
 
 - **80,000+ Domains Blocked** — updated every 24 hours from StevenBlack, AdAway, and curated threat feeds
-- **Real-Time DNS Protection** — sub-millisecond filtering with in-memory cache
+- **Real-Time DNS Protection** — sub-millisecond in-memory DNS filtering
 - **Per-Device Control** — manage multiple Android devices from one dashboard
-- **Full Analytics** — 6 interactive charts (time series, categories, top domains, per-device, threats)
-- **Exportable Reports** — PDF, CSV, and JSON exports with scheduled delivery
+- **Full Analytics** — 6 interactive charts: time series, categories, top domains, per-device, block rate trend, threat timeline
+- **Exportable Reports** — PDF, CSV, and JSON exports with scheduled delivery (weekly / monthly)
 - **Threat Intelligence** — community-reported malicious domains with voting and verification
-- **Notifications** — real-time alerts via SSE with webhook delivery and configurable rules
+- **Notifications** — real-time alerts via SSE, webhook delivery, and configurable alert rules
 - **Admin Dashboard** — manage users, devices, blocklists, and system health
-- **Production Hardened** — rate limiting, Helmet.js security headers, env validation, global error handling
+- **Production Hardened** — Helmet.js security headers, tiered rate limiting, env validation, global error handling
 
 ---
 
-## Quick Deploy (Replit)
+## Quick Start (Self-Hosted)
 
-1. Fork this project on Replit
-2. Set the required environment variables (see below)
-3. Click **Deploy** — the server starts automatically
+### Prerequisites
 
----
+- Node.js 20+
+- PostgreSQL 14+
+- pnpm 9+
 
-## Environment Variables
+### 1. Clone & install
+
+```bash
+git clone https://github.com/Madhumasa84/ShieldOS.git
+cd ShieldOS
+pnpm install
+```
+
+### 2. Set environment variables
+
+Copy and fill in the values:
+
+```bash
+cp .env.example .env
+```
 
 | Variable | Required | Description |
 |---|---|---|
@@ -39,27 +53,43 @@ ShieldOS is an open-source, self-hosted privacy backend + admin dashboard for An
 | `NODE_ENV` | Yes | `production` or `development` |
 | `SESSION_SECRET` | Recommended | Express session secret |
 
-The server validates all required variables on startup and exits with a clear error message if any are missing.
+The server validates all required variables on startup and exits with a clear error if any are missing.
+
+### 3. Run database migrations
+
+```bash
+pnpm --filter @workspace/db run migrate
+```
+
+### 4. Start the server
+
+```bash
+# Development
+pnpm --filter @workspace/api-server run dev
+pnpm --filter @workspace/shieldos run dev
+
+# Production build
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/api-server run start
+```
 
 ---
 
 ## Android App Setup
 
 1. Open the ShieldOS dashboard → **Android Setup** tab
-2. Copy your server's DNS endpoint URL
+2. Copy your server's Private DNS endpoint URL
 3. On your Android device: **Settings → Network → Private DNS**
 4. Enter your ShieldOS server URL
-5. All DNS queries now route through ShieldOS
+5. Every DNS query now routes through ShieldOS — trackers blocked automatically
 
 ---
 
 ## API Documentation
 
-Interactive API docs are available at `/api-docs` in the dashboard (Swagger UI).
+Interactive Swagger UI is available at `/api-docs` inside the dashboard.
 
 Base URL: `https://your-domain/api/v1`
-
-Key endpoints:
 
 | Endpoint | Description |
 |---|---|
@@ -87,19 +117,11 @@ All rate-limited responses include a `Retry-After` header.
 
 ## Security
 
-- **Helmet.js** — HSTS, CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy: no-referrer, Permissions-Policy
-- **Rate limiting** — tiered limits per endpoint type
+- **Helmet.js** — HSTS, CSP, X-Frame-Options: DENY, noSniff, Referrer-Policy, Permissions-Policy
+- **Rate limiting** — tiered limits per endpoint type via express-rate-limit
 - **Error handling** — stack traces never exposed in production
-- **Environment validation** — hard exit on missing/invalid config
-- **Auth** — Clerk-powered authentication with JWT + httpOnly cookie session
-
----
-
-## Screenshots
-
-| Dashboard | Analytics | Threat Feed |
-|---|---|---|
-| *(coming soon)* | *(coming soon)* | *(coming soon)* |
+- **Environment validation** — hard exit on missing/invalid config at startup
+- **Auth** — Clerk-powered authentication (OAuth + email/password)
 
 ---
 
@@ -108,11 +130,32 @@ All rate-limited responses include a `Retry-After` header.
 - **Backend**: Node.js 24 + Express 5 + TypeScript
 - **Database**: PostgreSQL + Drizzle ORM
 - **Frontend**: React + Vite + Tailwind CSS v4 + shadcn/ui
-- **Auth**: Clerk (OAuth, email/password)
+- **Auth**: Clerk
 - **Charts**: Recharts
 - **PDF generation**: PDFKit
 - **Security**: Helmet.js + express-rate-limit
 - **Monorepo**: pnpm workspaces
+
+---
+
+## Screenshots
+
+| Landing | Dashboard | Analytics |
+|---|---|---|
+| *(coming soon)* | *(coming soon)* | *(coming soon)* |
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open an issue or pull request.
+
+---
+
+## Author
+
+**Madhusudhanan G**
+- GitHub: [@Madhumasa84](https://github.com/Madhumasa84)
 
 ---
 

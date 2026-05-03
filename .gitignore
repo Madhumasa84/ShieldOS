@@ -44,6 +44,10 @@ Thumbs.db
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 
-# Replit
+# Replit-specific (not needed for self-hosting)
 .cache/
 .local/
+.replit
+.replitignore
+replit.md
+**/.replit-artifact/
