@@ -365,8 +365,12 @@ export async function customFetch<T = unknown>(
 
   if (!response.ok) {
     if (response.status === 401 && typeof window !== "undefined") {
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+      const path = window.location.pathname;
+      if (!path.includes("/sign-in") && !path.includes("/login")) {
+        // Clear any stale localStorage auth flags before redirecting
+        localStorage.removeItem("shieldos_authenticated");
+        localStorage.removeItem("shieldos_role");
+        window.location.href = "/sign-in";
       }
     }
     const errorData = await parseErrorBody(response, method);

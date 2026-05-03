@@ -6,7 +6,7 @@ import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wo
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { isAuthenticated, setAuthenticated } from "@/lib/auth";
+import { isAuthenticated, setAuthenticated, clearTokens } from "@/lib/auth";
 
 import Login from "@/pages/login";
 import Register from "@/pages/register";
@@ -148,6 +148,7 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
     <Route {...rest}>
       {() => {
         if (!isAuthenticated()) {
+          clearTokens();
           return <Redirect to="/sign-in" />;
         }
         return <Component />;
