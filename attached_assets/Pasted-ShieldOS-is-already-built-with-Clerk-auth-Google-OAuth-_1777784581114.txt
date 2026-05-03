@@ -1,0 +1,81 @@
+ShieldOS is already built with:
+- Clerk auth (Google OAuth + email/password)
+- Dashboard with live stats
+- Blocklist (80,000+ domains, auto-sync)
+- Device management with tokens
+- Threat monitoring
+- REST API at /api/v1/
+- OpenAPI spec + React Query hooks + Zod validation
+
+DO NOT rebuild anything existing.
+ADD only what is missing below.
+
+════════════════════════════════════════════
+ADD — REAL DNS QUERY PROCESSING ENGINE
+════════════════════════════════════════════
+
+The app blocks domains in a list but does NOT
+actually intercept real DNS queries yet.
+Add the real-time DNS processing pipeline:
+
+1. DNS QUERY ENDPOINT (high performance):
+POST /api/v1/dns/query
+Headers: Authorization: Bearer {device_token}
+Body: { "domain": "ads.doubleclick.net", "device_id": "xxx" }
+Response: {
+  "blocked": true,
+  "category": "ads",
+  "rule": "StevenBlack",
+  "response_time_ms": 2
+}
+- Must respond in under 20ms
+- In-memory LRU cache (50,000 entries)
+- Async log to threat_events table
+- Never block the response waiting for DB write
+
+2. SUBDOMAIN MATCHING:
+- "ads.google.com" should match if "google.com" blocked
+- "tracking.evil.ads.com" matches "ads.com"
+- Wildcard support: *.doubleclick.net blocks all subdomains
+- Exact match checked first (faster)
+- Parent domain fallback second
+
+3. BATCH DNS CHECK:
+POST /api/v1/dns/batch
+Body: { "domains": ["domain1.com", "domain2.com"], "device_id": "xxx" }
+Response: { "results": { "domain1.com": true, "domain2.com": false } }
+Max 100 domains per batch request
+
+4. DNS STATS PER DEVICE:
+GET /api/v1/dns/stats/{device_id}
+Response: {
+  "total_queries_today": 4521,
+  "blocked_today": 892,
+  "block_rate": "19.7%",
+  "top_blocked": [{"domain": "...", "count": 45}],
+  "queries_by_hour": [...24 hours],
+  "most_recent_block": "2 minutes ago"
+}
+
+5. ALLOWLIST (user whitelist):
+POST /api/v1/dns/allow
+Body: { "domain": "ads.mycompany.com" }
+Never block allowlisted domains even if on blocklist
+
+GET /api/v1/dns/allow
+Returns user's full allowlist
+
+DELETE /api/v1/dns/allow/{domain}
+Remove from allowlist
+
+6. CACHE MANAGEMENT:
+POST /api/v1/dns/cache/flush
+Admin only — clears in-memory LRU cache
+Returns: { "entries_cleared": 12450 }
+
+GET /api/v1/dns/cache/stats
+Returns: { "size": 12450, "hit_rate": "94.2%", "miss_rate": "5.8%" }
+
+Add these to OpenAPI spec.
+Generate React Query hooks for all new endpoints.
+Add Zod schemas for all request/response types.

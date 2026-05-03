@@ -526,3 +526,106 @@ export const GetCategoryBreakdownResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * @summary Check a single domain against the blocklist (sub-20ms)
+ */
+export const DnsQueryBody = zod.object({
+  domain: zod.string(),
+  device_id: zod.string().optional(),
+});
+
+export const DnsQueryResponse = zod.object({
+  blocked: zod.boolean(),
+  category: zod.string(),
+  rule: zod.string(),
+  response_time_ms: zod.number(),
+});
+
+/**
+ * @summary Check up to 100 domains in one request
+ */
+export const dnsBatchBodyDomainsMax = 100;
+
+export const DnsBatchBody = zod.object({
+  domains: zod.array(zod.string()).max(dnsBatchBodyDomainsMax),
+  device_id: zod.string().optional(),
+});
+
+export const DnsBatchResponse = zod.object({
+  results: zod.record(zod.string(), zod.boolean()),
+});
+
+/**
+ * @summary DNS query statistics for a device
+ */
+export const GetDnsStatsParams = zod.object({
+  deviceId: zod.coerce.number(),
+});
+
+export const GetDnsStatsResponse = zod.object({
+  total_queries_today: zod.number(),
+  blocked_today: zod.number(),
+  block_rate: zod.string(),
+  top_blocked: zod.array(
+    zod.object({
+      domain: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  queries_by_hour: zod.array(
+    zod.object({
+      hour: zod.number(),
+      count: zod.number(),
+    }),
+  ),
+  most_recent_block: zod.string().nullish(),
+});
+
+/**
+ * @summary Get the user's full allowlist
+ */
+export const GetDnsAllowlistResponse = zod.object({
+  allowlist: zod.array(
+    zod.object({
+      id: zod.number(),
+      domain: zod.string(),
+      addedAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Add a domain to the allowlist (never blocked)
+ */
+export const AddDnsAllowlistBody = zod.object({
+  domain: zod.string(),
+});
+
+/**
+ * @summary Remove a domain from the allowlist
+ */
+export const DeleteDnsAllowlistParams = zod.object({
+  domain: zod.coerce.string(),
+});
+
+export const DeleteDnsAllowlistResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Flush the in-memory DNS result cache (admin only)
+ */
+export const FlushDnsCacheResponse = zod.object({
+  entries_cleared: zod.number(),
+});
+
+/**
+ * @summary Get DNS cache performance statistics
+ */
+export const GetDnsCacheStatsResponse = zod.object({
+  size: zod.number(),
+  hitRate: zod.string(),
+  missRate: zod.string(),
+  blocklistSize: zod.number(),
+});

@@ -22,6 +22,8 @@ tags:
     description: Dashboard aggregates
   - name: admin
     description: Admin user management
+  - name: dns
+    description: Real-time DNS query processing and filtering
 
 paths:
   /healthz:
@@ -688,6 +690,155 @@ paths:
               schema:
                 $ref: "#/components/schemas/CategoryBreakdownResponse"
 
+  # DNS
+  /v1/dns/query:
+    post:
+      operationId: dnsQuery
+      tags: [dns]
+      summary: Check a single domain against the blocklist (sub-20ms)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DnsQueryBody"
+      responses:
+        "200":
+          description: DNS query result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsQueryResponse"
+
+  /v1/dns/batch:
+    post:
+      operationId: dnsBatch
+      tags: [dns]
+      summary: Check up to 100 domains in one request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DnsBatchBody"
+      responses:
+        "200":
+          description: Batch DNS results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsBatchResponse"
+
+  /v1/dns/stats/{deviceId}:
+    get:
+      operationId: getDnsStats
+      tags: [dns]
+      summary: DNS query statistics for a device
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: DNS statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsStatsResponse"
+
+  /v1/dns/allow:
+    get:
+      operationId: getDnsAllowlist
+      tags: [dns]
+      summary: Get the user's full allowlist
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Allowlist entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsAllowlistResponse"
+    post:
+      operationId: addDnsAllowlist
+      tags: [dns]
+      summary: Add a domain to the allowlist (never blocked)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DnsAllowBody"
+      responses:
+        "201":
+          description: Domain added to allowlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsAllowEntry"
+
+  /v1/dns/allow/{domain}:
+    delete:
+      operationId: deleteDnsAllowlist
+      tags: [dns]
+      summary: Remove a domain from the allowlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Removed from allowlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /v1/dns/cache/flush:
+    post:
+      operationId: flushDnsCache
+      tags: [dns]
+      summary: Flush the in-memory DNS result cache (admin only)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cache flushed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsCacheFlushResponse"
+
+  /v1/dns/cache/stats:
+    get:
+      operationId: getDnsCacheStats
+      tags: [dns]
+      summary: Get DNS cache performance statistics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cache stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsCacheStatsResponse"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1204,6 +1355,138 @@ components:
           items:
             $ref: "#/components/schemas/CategoryBreakdownItem"
       required: [data]
+
+    # DNS
+    DnsQueryBody:
+      type: object
+      properties:
+        domain:
+          type: string
+        device_id:
+          type: string
+      required: [domain]
+
+    DnsQueryResponse:
+      type: object
+      properties:
+        blocked:
+          type: boolean
+        category:
+          type: string
+        rule:
+          type: string
+        response_time_ms:
+          type: integer
+      required: [blocked, category, rule, response_time_ms]
+
+    DnsBatchBody:
+      type: object
+      properties:
+        domains:
+          type: array
+          items:
+            type: string
+          maxItems: 100
+        device_id:
+          type: string
+      required: [domains]
+
+    DnsBatchResponse:
+      type: object
+      properties:
+        results:
+          type: object
+          additionalProperties:
+            type: boolean
+      required: [results]
+
+    DnsTopBlocked:
+      type: object
+      properties:
+        domain:
+          type: string
+        count:
+          type: integer
+      required: [domain, count]
+
+    DnsHourBucket:
+      type: object
+      properties:
+        hour:
+          type: integer
+        count:
+          type: integer
+      required: [hour, count]
+
+    DnsStatsResponse:
+      type: object
+      properties:
+        total_queries_today:
+          type: integer
+        blocked_today:
+          type: integer
+        block_rate:
+          type: string
+        top_blocked:
+          type: array
+          items:
+            $ref: "#/components/schemas/DnsTopBlocked"
+        queries_by_hour:
+          type: array
+          items:
+            $ref: "#/components/schemas/DnsHourBucket"
+        most_recent_block:
+          type: string
+          nullable: true
+      required: [total_queries_today, blocked_today, block_rate, top_blocked, queries_by_hour]
+
+    DnsAllowBody:
+      type: object
+      properties:
+        domain:
+          type: string
+      required: [domain]
+
+    DnsAllowEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        domain:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+      required: [id, domain, addedAt]
+
+    DnsAllowlistResponse:
+      type: object
+      properties:
+        allowlist:
+          type: array
+          items:
+            $ref: "#/components/schemas/DnsAllowEntry"
+      required: [allowlist]
+
+    DnsCacheFlushResponse:
+      type: object
+      properties:
+        entries_cleared:
+          type: integer
+      required: [entries_cleared]
+
+    DnsCacheStatsResponse:
+      type: object
+      properties:
+        size:
+          type: integer
+        hitRate:
+          type: string
+        missRate:
+          type: string
+        blocklistSize:
+          type: integer
+      required: [size, hitRate, missRate, blocklistSize]
 
     # LOG
     LogRequestBody:

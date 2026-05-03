@@ -30,6 +30,16 @@ import type {
   DashboardSummary,
   DeviceListResponse,
   DeviceProvisionResponse,
+  DnsAllowBody,
+  DnsAllowEntry,
+  DnsAllowlistResponse,
+  DnsBatchBody,
+  DnsBatchResponse,
+  DnsCacheFlushResponse,
+  DnsCacheStatsResponse,
+  DnsQueryBody,
+  DnsQueryResponse,
+  DnsStatsResponse,
   DomainCheckResponse,
   GetThreatFeedParams,
   HealthStatus,
@@ -2721,6 +2731,666 @@ export function useGetCategoryBreakdown<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetCategoryBreakdownQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Check a single domain against the blocklist (sub-20ms)
+ */
+export const getDnsQueryUrl = () => {
+  return `/api/v1/dns/query`;
+};
+
+export const dnsQuery = async (
+  dnsQueryBody: DnsQueryBody,
+  options?: RequestInit,
+): Promise<DnsQueryResponse> => {
+  return customFetch<DnsQueryResponse>(getDnsQueryUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(dnsQueryBody),
+  });
+};
+
+export const getDnsQueryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dnsQuery>>,
+    TError,
+    { data: BodyType<DnsQueryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof dnsQuery>>,
+  TError,
+  { data: BodyType<DnsQueryBody> },
+  TContext
+> => {
+  const mutationKey = ["dnsQuery"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof dnsQuery>>,
+    { data: BodyType<DnsQueryBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return dnsQuery(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DnsQueryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof dnsQuery>>
+>;
+export type DnsQueryMutationBody = BodyType<DnsQueryBody>;
+export type DnsQueryMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Check a single domain against the blocklist (sub-20ms)
+ */
+export const useDnsQuery = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dnsQuery>>,
+    TError,
+    { data: BodyType<DnsQueryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof dnsQuery>>,
+  TError,
+  { data: BodyType<DnsQueryBody> },
+  TContext
+> => {
+  return useMutation(getDnsQueryMutationOptions(options));
+};
+
+/**
+ * @summary Check up to 100 domains in one request
+ */
+export const getDnsBatchUrl = () => {
+  return `/api/v1/dns/batch`;
+};
+
+export const dnsBatch = async (
+  dnsBatchBody: DnsBatchBody,
+  options?: RequestInit,
+): Promise<DnsBatchResponse> => {
+  return customFetch<DnsBatchResponse>(getDnsBatchUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(dnsBatchBody),
+  });
+};
+
+export const getDnsBatchMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dnsBatch>>,
+    TError,
+    { data: BodyType<DnsBatchBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof dnsBatch>>,
+  TError,
+  { data: BodyType<DnsBatchBody> },
+  TContext
+> => {
+  const mutationKey = ["dnsBatch"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof dnsBatch>>,
+    { data: BodyType<DnsBatchBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return dnsBatch(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DnsBatchMutationResult = NonNullable<
+  Awaited<ReturnType<typeof dnsBatch>>
+>;
+export type DnsBatchMutationBody = BodyType<DnsBatchBody>;
+export type DnsBatchMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Check up to 100 domains in one request
+ */
+export const useDnsBatch = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dnsBatch>>,
+    TError,
+    { data: BodyType<DnsBatchBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof dnsBatch>>,
+  TError,
+  { data: BodyType<DnsBatchBody> },
+  TContext
+> => {
+  return useMutation(getDnsBatchMutationOptions(options));
+};
+
+/**
+ * @summary DNS query statistics for a device
+ */
+export const getGetDnsStatsUrl = (deviceId: number) => {
+  return `/api/v1/dns/stats/${deviceId}`;
+};
+
+export const getDnsStats = async (
+  deviceId: number,
+  options?: RequestInit,
+): Promise<DnsStatsResponse> => {
+  return customFetch<DnsStatsResponse>(getGetDnsStatsUrl(deviceId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDnsStatsQueryKey = (deviceId: number) => {
+  return [`/api/v1/dns/stats/${deviceId}`] as const;
+};
+
+export const getGetDnsStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDnsStats>>,
+  TError = ErrorType<unknown>,
+>(
+  deviceId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDnsStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDnsStatsQueryKey(deviceId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDnsStats>>> = ({
+    signal,
+  }) => getDnsStats(deviceId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!deviceId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDnsStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDnsStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDnsStats>>
+>;
+export type GetDnsStatsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary DNS query statistics for a device
+ */
+
+export function useGetDnsStats<
+  TData = Awaited<ReturnType<typeof getDnsStats>>,
+  TError = ErrorType<unknown>,
+>(
+  deviceId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDnsStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDnsStatsQueryOptions(deviceId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get the user's full allowlist
+ */
+export const getGetDnsAllowlistUrl = () => {
+  return `/api/v1/dns/allow`;
+};
+
+export const getDnsAllowlist = async (
+  options?: RequestInit,
+): Promise<DnsAllowlistResponse> => {
+  return customFetch<DnsAllowlistResponse>(getGetDnsAllowlistUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDnsAllowlistQueryKey = () => {
+  return [`/api/v1/dns/allow`] as const;
+};
+
+export const getGetDnsAllowlistQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDnsAllowlist>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDnsAllowlist>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDnsAllowlistQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDnsAllowlist>>> = ({
+    signal,
+  }) => getDnsAllowlist({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDnsAllowlist>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDnsAllowlistQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDnsAllowlist>>
+>;
+export type GetDnsAllowlistQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the user's full allowlist
+ */
+
+export function useGetDnsAllowlist<
+  TData = Awaited<ReturnType<typeof getDnsAllowlist>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDnsAllowlist>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDnsAllowlistQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a domain to the allowlist (never blocked)
+ */
+export const getAddDnsAllowlistUrl = () => {
+  return `/api/v1/dns/allow`;
+};
+
+export const addDnsAllowlist = async (
+  dnsAllowBody: DnsAllowBody,
+  options?: RequestInit,
+): Promise<DnsAllowEntry> => {
+  return customFetch<DnsAllowEntry>(getAddDnsAllowlistUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(dnsAllowBody),
+  });
+};
+
+export const getAddDnsAllowlistMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addDnsAllowlist>>,
+    TError,
+    { data: BodyType<DnsAllowBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addDnsAllowlist>>,
+  TError,
+  { data: BodyType<DnsAllowBody> },
+  TContext
+> => {
+  const mutationKey = ["addDnsAllowlist"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addDnsAllowlist>>,
+    { data: BodyType<DnsAllowBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return addDnsAllowlist(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddDnsAllowlistMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addDnsAllowlist>>
+>;
+export type AddDnsAllowlistMutationBody = BodyType<DnsAllowBody>;
+export type AddDnsAllowlistMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add a domain to the allowlist (never blocked)
+ */
+export const useAddDnsAllowlist = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addDnsAllowlist>>,
+    TError,
+    { data: BodyType<DnsAllowBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addDnsAllowlist>>,
+  TError,
+  { data: BodyType<DnsAllowBody> },
+  TContext
+> => {
+  return useMutation(getAddDnsAllowlistMutationOptions(options));
+};
+
+/**
+ * @summary Remove a domain from the allowlist
+ */
+export const getDeleteDnsAllowlistUrl = (domain: string) => {
+  return `/api/v1/dns/allow/${domain}`;
+};
+
+export const deleteDnsAllowlist = async (
+  domain: string,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getDeleteDnsAllowlistUrl(domain), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteDnsAllowlistMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDnsAllowlist>>,
+    TError,
+    { domain: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteDnsAllowlist>>,
+  TError,
+  { domain: string },
+  TContext
+> => {
+  const mutationKey = ["deleteDnsAllowlist"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteDnsAllowlist>>,
+    { domain: string }
+  > = (props) => {
+    const { domain } = props ?? {};
+
+    return deleteDnsAllowlist(domain, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDnsAllowlistMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteDnsAllowlist>>
+>;
+
+export type DeleteDnsAllowlistMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove a domain from the allowlist
+ */
+export const useDeleteDnsAllowlist = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDnsAllowlist>>,
+    TError,
+    { domain: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteDnsAllowlist>>,
+  TError,
+  { domain: string },
+  TContext
+> => {
+  return useMutation(getDeleteDnsAllowlistMutationOptions(options));
+};
+
+/**
+ * @summary Flush the in-memory DNS result cache (admin only)
+ */
+export const getFlushDnsCacheUrl = () => {
+  return `/api/v1/dns/cache/flush`;
+};
+
+export const flushDnsCache = async (
+  options?: RequestInit,
+): Promise<DnsCacheFlushResponse> => {
+  return customFetch<DnsCacheFlushResponse>(getFlushDnsCacheUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getFlushDnsCacheMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof flushDnsCache>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof flushDnsCache>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["flushDnsCache"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof flushDnsCache>>,
+    void
+  > = () => {
+    return flushDnsCache(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FlushDnsCacheMutationResult = NonNullable<
+  Awaited<ReturnType<typeof flushDnsCache>>
+>;
+
+export type FlushDnsCacheMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Flush the in-memory DNS result cache (admin only)
+ */
+export const useFlushDnsCache = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof flushDnsCache>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof flushDnsCache>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getFlushDnsCacheMutationOptions(options));
+};
+
+/**
+ * @summary Get DNS cache performance statistics
+ */
+export const getGetDnsCacheStatsUrl = () => {
+  return `/api/v1/dns/cache/stats`;
+};
+
+export const getDnsCacheStats = async (
+  options?: RequestInit,
+): Promise<DnsCacheStatsResponse> => {
+  return customFetch<DnsCacheStatsResponse>(getGetDnsCacheStatsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDnsCacheStatsQueryKey = () => {
+  return [`/api/v1/dns/cache/stats`] as const;
+};
+
+export const getGetDnsCacheStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDnsCacheStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDnsCacheStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDnsCacheStatsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDnsCacheStats>>
+  > = ({ signal }) => getDnsCacheStats({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDnsCacheStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDnsCacheStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDnsCacheStats>>
+>;
+export type GetDnsCacheStatsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get DNS cache performance statistics
+ */
+
+export function useGetDnsCacheStats<
+  TData = Awaited<ReturnType<typeof getDnsCacheStats>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDnsCacheStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDnsCacheStatsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

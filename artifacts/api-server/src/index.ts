@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { warmBlocklist } from "./services/dns-engine";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,7 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Warm the DNS engine blocklist cache in the background
+  warmBlocklist().catch((e) => logger.error({ err: e }, "DNS engine warm failed"));
 });

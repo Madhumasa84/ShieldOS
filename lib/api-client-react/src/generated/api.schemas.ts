@@ -297,6 +297,74 @@ export interface CategoryBreakdownResponse {
   data: CategoryBreakdownItem[];
 }
 
+export interface DnsQueryBody {
+  domain: string;
+  device_id?: string;
+}
+
+export interface DnsQueryResponse {
+  blocked: boolean;
+  category: string;
+  rule: string;
+  response_time_ms: number;
+}
+
+export interface DnsBatchBody {
+  /** @maxItems 100 */
+  domains: string[];
+  device_id?: string;
+}
+
+export type DnsBatchResponseResults = { [key: string]: boolean };
+
+export interface DnsBatchResponse {
+  results: DnsBatchResponseResults;
+}
+
+export interface DnsTopBlocked {
+  domain: string;
+  count: number;
+}
+
+export interface DnsHourBucket {
+  hour: number;
+  count: number;
+}
+
+export interface DnsStatsResponse {
+  total_queries_today: number;
+  blocked_today: number;
+  block_rate: string;
+  top_blocked: DnsTopBlocked[];
+  queries_by_hour: DnsHourBucket[];
+  most_recent_block?: string | null;
+}
+
+export interface DnsAllowBody {
+  domain: string;
+}
+
+export interface DnsAllowEntry {
+  id: number;
+  domain: string;
+  addedAt: string;
+}
+
+export interface DnsAllowlistResponse {
+  allowlist: DnsAllowEntry[];
+}
+
+export interface DnsCacheFlushResponse {
+  entries_cleared: number;
+}
+
+export interface DnsCacheStatsResponse {
+  size: number;
+  hitRate: string;
+  missRate: string;
+  blocklistSize: number;
+}
+
 export interface LogRequestBody {
   device_id: number;
   domain: string;
