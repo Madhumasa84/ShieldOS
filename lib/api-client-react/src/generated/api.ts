@@ -19,6 +19,12 @@ import type {
 import type {
   AddDomainBody,
   AdminUsersResponse,
+  AndroidHeartbeatBody,
+  AndroidHeartbeatResponse,
+  AndroidRegisterBody,
+  AndroidRegisterResponse,
+  AndroidStatsBody,
+  AndroidStatsResponse,
   AuthResponse,
   BlockedChartResponse,
   BlockedRequestsResponse,
@@ -2738,6 +2744,339 @@ export function useGetCategoryBreakdown<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Register an Android device and receive its device token + WireGuard config
+ */
+export const getAndroidRegisterUrl = () => {
+  return `/api/v1/android/register`;
+};
+
+export const androidRegister = async (
+  androidRegisterBody: AndroidRegisterBody,
+  options?: RequestInit,
+): Promise<AndroidRegisterResponse> => {
+  return customFetch<AndroidRegisterResponse>(getAndroidRegisterUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(androidRegisterBody),
+  });
+};
+
+export const getAndroidRegisterMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof androidRegister>>,
+    TError,
+    { data: BodyType<AndroidRegisterBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof androidRegister>>,
+  TError,
+  { data: BodyType<AndroidRegisterBody> },
+  TContext
+> => {
+  const mutationKey = ["androidRegister"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof androidRegister>>,
+    { data: BodyType<AndroidRegisterBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return androidRegister(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AndroidRegisterMutationResult = NonNullable<
+  Awaited<ReturnType<typeof androidRegister>>
+>;
+export type AndroidRegisterMutationBody = BodyType<AndroidRegisterBody>;
+export type AndroidRegisterMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Register an Android device and receive its device token + WireGuard config
+ */
+export const useAndroidRegister = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof androidRegister>>,
+    TError,
+    { data: BodyType<AndroidRegisterBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof androidRegister>>,
+  TError,
+  { data: BodyType<AndroidRegisterBody> },
+  TContext
+> => {
+  return useMutation(getAndroidRegisterMutationOptions(options));
+};
+
+/**
+ * @summary Download gzip-compressed blocklist (ETag/304 supported)
+ */
+export const getAndroidGetBlocklistUrl = () => {
+  return `/api/v1/android/blocklist`;
+};
+
+export const androidGetBlocklist = async (
+  options?: RequestInit,
+): Promise<string> => {
+  return customFetch<string>(getAndroidGetBlocklistUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAndroidGetBlocklistQueryKey = () => {
+  return [`/api/v1/android/blocklist`] as const;
+};
+
+export const getAndroidGetBlocklistQueryOptions = <
+  TData = Awaited<ReturnType<typeof androidGetBlocklist>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof androidGetBlocklist>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAndroidGetBlocklistQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof androidGetBlocklist>>
+  > = ({ signal }) => androidGetBlocklist({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof androidGetBlocklist>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AndroidGetBlocklistQueryResult = NonNullable<
+  Awaited<ReturnType<typeof androidGetBlocklist>>
+>;
+export type AndroidGetBlocklistQueryError = ErrorType<void>;
+
+/**
+ * @summary Download gzip-compressed blocklist (ETag/304 supported)
+ */
+
+export function useAndroidGetBlocklist<
+  TData = Awaited<ReturnType<typeof androidGetBlocklist>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof androidGetBlocklist>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAndroidGetBlocklistQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Push hourly aggregated stats from the Android app
+ */
+export const getAndroidPushStatsUrl = () => {
+  return `/api/v1/android/stats`;
+};
+
+export const androidPushStats = async (
+  androidStatsBody: AndroidStatsBody,
+  options?: RequestInit,
+): Promise<AndroidStatsResponse> => {
+  return customFetch<AndroidStatsResponse>(getAndroidPushStatsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(androidStatsBody),
+  });
+};
+
+export const getAndroidPushStatsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof androidPushStats>>,
+    TError,
+    { data: BodyType<AndroidStatsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof androidPushStats>>,
+  TError,
+  { data: BodyType<AndroidStatsBody> },
+  TContext
+> => {
+  const mutationKey = ["androidPushStats"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof androidPushStats>>,
+    { data: BodyType<AndroidStatsBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return androidPushStats(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AndroidPushStatsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof androidPushStats>>
+>;
+export type AndroidPushStatsMutationBody = BodyType<AndroidStatsBody>;
+export type AndroidPushStatsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Push hourly aggregated stats from the Android app
+ */
+export const useAndroidPushStats = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof androidPushStats>>,
+    TError,
+    { data: BodyType<AndroidStatsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof androidPushStats>>,
+  TError,
+  { data: BodyType<AndroidStatsBody> },
+  TContext
+> => {
+  return useMutation(getAndroidPushStatsMutationOptions(options));
+};
+
+/**
+ * @summary Device heartbeat — updates last_seen, returns sync flags
+ */
+export const getAndroidHeartbeatUrl = () => {
+  return `/api/v1/android/heartbeat`;
+};
+
+export const androidHeartbeat = async (
+  androidHeartbeatBody: AndroidHeartbeatBody,
+  options?: RequestInit,
+): Promise<AndroidHeartbeatResponse> => {
+  return customFetch<AndroidHeartbeatResponse>(getAndroidHeartbeatUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(androidHeartbeatBody),
+  });
+};
+
+export const getAndroidHeartbeatMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof androidHeartbeat>>,
+    TError,
+    { data: BodyType<AndroidHeartbeatBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof androidHeartbeat>>,
+  TError,
+  { data: BodyType<AndroidHeartbeatBody> },
+  TContext
+> => {
+  const mutationKey = ["androidHeartbeat"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof androidHeartbeat>>,
+    { data: BodyType<AndroidHeartbeatBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return androidHeartbeat(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AndroidHeartbeatMutationResult = NonNullable<
+  Awaited<ReturnType<typeof androidHeartbeat>>
+>;
+export type AndroidHeartbeatMutationBody = BodyType<AndroidHeartbeatBody>;
+export type AndroidHeartbeatMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Device heartbeat — updates last_seen, returns sync flags
+ */
+export const useAndroidHeartbeat = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof androidHeartbeat>>,
+    TError,
+    { data: BodyType<AndroidHeartbeatBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof androidHeartbeat>>,
+  TError,
+  { data: BodyType<AndroidHeartbeatBody> },
+  TContext
+> => {
+  return useMutation(getAndroidHeartbeatMutationOptions(options));
+};
 
 /**
  * @summary Check a single domain against the blocklist (sub-20ms)

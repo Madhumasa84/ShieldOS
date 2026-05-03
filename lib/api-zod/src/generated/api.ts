@@ -528,6 +528,66 @@ export const GetCategoryBreakdownResponse = zod.object({
 });
 
 /**
+ * @summary Register an Android device and receive its device token + WireGuard config
+ */
+export const AndroidRegisterBody = zod.object({
+  device_name: zod.string(),
+  android_version: zod.string().optional(),
+  app_version: zod.string().optional(),
+  public_key: zod.string(),
+});
+
+/**
+ * @summary Download gzip-compressed blocklist (ETag/304 supported)
+ */
+export const AndroidGetBlocklistHeader = zod.object({
+  "If-None-Match": zod.string().optional(),
+});
+
+/**
+ * @summary Push hourly aggregated stats from the Android app
+ */
+export const AndroidPushStatsBody = zod.object({
+  device_id: zod.string(),
+  period_start: zod.coerce.date(),
+  period_end: zod.coerce.date(),
+  total_queries: zod.number(),
+  blocked_count: zod.number(),
+  top_blocked_domains: zod
+    .array(
+      zod.object({
+        domain: zod.string(),
+        count: zod.number(),
+      }),
+    )
+    .optional(),
+  battery_impact_percent: zod.number().optional(),
+  data_saved_kb: zod.number().optional(),
+});
+
+export const AndroidPushStatsResponse = zod.object({
+  ok: zod.boolean(),
+  recorded: zod.number(),
+  battery_impact_percent: zod.number().nullish(),
+  data_saved_kb: zod.number().nullish(),
+});
+
+/**
+ * @summary Device heartbeat — updates last_seen, returns sync flags
+ */
+export const AndroidHeartbeatBody = zod.object({
+  device_id: zod.string(),
+  vpn_active: zod.boolean().optional(),
+});
+
+export const AndroidHeartbeatResponse = zod.object({
+  blocklist_updated: zod.boolean(),
+  force_sync: zod.boolean(),
+  vpn_active: zod.boolean(),
+  server_time: zod.coerce.date(),
+});
+
+/**
  * @summary Check a single domain against the blocklist (sub-20ms)
  */
 export const DnsQueryBody = zod.object({

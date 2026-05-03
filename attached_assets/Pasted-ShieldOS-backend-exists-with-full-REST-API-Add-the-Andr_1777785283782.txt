@@ -1,0 +1,76 @@
+ShieldOS backend exists with full REST API.
+Add the Android-specific API bridge layer.
+
+════════════════════════════════════════════
+ADD — ANDROID APP API BRIDGE
+════════════════════════════════════════════
+
+1. ANDROID DEVICE REGISTRATION FLOW:
+POST /api/v1/android/register
+Body: {
+  "device_name": "My Phone",
+  "android_version": "14",
+  "app_version": "1.0.0",
+  "public_key": "wireguard_public_key_base64"
+}
+Response: {
+  "device_id": "uuid",
+  "device_token": "sk_device_xxxxx",
+  "wireguard_config": "full .conf file content",
+  "blocklist_url": "/api/v1/android/blocklist",
+  "dns_endpoint": "/api/v1/dns/query",
+  "sync_interval_hours": 24
+}
+
+2. ANDROID BLOCKLIST SYNC:
+GET /api/v1/android/blocklist
+Headers: Authorization: Bearer {device_token}
+- Returns gzip-compressed plain text
+- One domain per line
+- ETag header for cache validation
+- Returns 304 Not Modified if unchanged
+- Optimized for mobile (no JSON overhead)
+
+3. ANDROID STATS PUSH:
+POST /api/v1/android/stats
+Body: {
+  "device_id": "uuid",
+  "period_start": "ISO datetime",
+  "period_end": "ISO datetime",
+  "total_queries": 4521,
+  "blocked_count": 892,
+  "top_blocked_domains": [
+    {"domain": "doubleclick.net", "count": 45}
+  ],
+  "battery_impact_percent": 1.2,
+  "data_saved_kb": 2400
+}
+Android app pushes this every hour.
+Merge into dashboard stats.
+
+4. ANDROID HEARTBEAT:
+POST /api/v1/android/heartbeat
+Body: { "device_id": "uuid", "vpn_active": true }
+- Updates device last_seen
+- Returns: { "blocklist_updated": false, "force_sync": false }
+- If blocklist updated since last sync → force_sync: true
+- Called every 5 minutes by Android app
+
+5. ANDROID SETUP GUIDE PAGE:
+Add page at /setup in the dashboard frontend:
+- Step 1: Download ShieldOS Android APK (GitHub link)
+- Step 2: Open app → enter this server URL
+- Step 3: Login with your account
+- Step 4: Tap "Enable VPN" → all traffic protected
+- Show QR code of server URL for easy mobile setup
+- Show device token after registration
+- Copy buttons on all values
+
+6. ANDROID API DOCS PAGE:
+Add page at /api-docs in dashboard:
+- Interactive API explorer
+- All Android endpoints documented
+- Request/response examples
+- Code snippets in Kotlin for Android
+
+Add all to OpenAPI spec + React Query hooks.

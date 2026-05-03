@@ -22,6 +22,8 @@ tags:
     description: Dashboard aggregates
   - name: admin
     description: Admin user management
+  - name: android
+    description: Android app API bridge
   - name: dns
     description: Real-time DNS query processing and filtering
 
@@ -690,6 +692,92 @@ paths:
               schema:
                 $ref: "#/components/schemas/CategoryBreakdownResponse"
 
+  # ANDROID BRIDGE
+  /v1/android/register:
+    post:
+      operationId: androidRegister
+      tags: [android]
+      summary: Register an Android device and receive its device token + WireGuard config
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AndroidRegisterBody"
+      responses:
+        "201":
+          description: Device registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AndroidRegisterResponse"
+
+  /v1/android/blocklist:
+    get:
+      operationId: androidGetBlocklist
+      tags: [android]
+      summary: Download gzip-compressed blocklist (ETag/304 supported)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: If-None-Match
+          in: header
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Blocklist (gzip text/plain)
+          content:
+            text/plain:
+              schema:
+                type: string
+        "304":
+          description: Not Modified
+
+  /v1/android/stats:
+    post:
+      operationId: androidPushStats
+      tags: [android]
+      summary: Push hourly aggregated stats from the Android app
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AndroidStatsBody"
+      responses:
+        "200":
+          description: Stats recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AndroidStatsResponse"
+
+  /v1/android/heartbeat:
+    post:
+      operationId: androidHeartbeat
+      tags: [android]
+      summary: Device heartbeat — updates last_seen, returns sync flags
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AndroidHeartbeatBody"
+      responses:
+        "200":
+          description: Heartbeat acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AndroidHeartbeatResponse"
+
   # DNS
   /v1/dns/query:
     post:
@@ -1355,6 +1443,109 @@ components:
           items:
             $ref: "#/components/schemas/CategoryBreakdownItem"
       required: [data]
+
+    # ANDROID
+    AndroidRegisterBody:
+      type: object
+      properties:
+        device_name:
+          type: string
+        android_version:
+          type: string
+        app_version:
+          type: string
+        public_key:
+          type: string
+      required: [device_name, public_key]
+
+    AndroidRegisterResponse:
+      type: object
+      properties:
+        device_id:
+          type: string
+        device_token:
+          type: string
+        wireguard_config:
+          type: string
+        blocklist_url:
+          type: string
+        dns_endpoint:
+          type: string
+        sync_interval_hours:
+          type: integer
+      required: [device_id, device_token, wireguard_config, blocklist_url, dns_endpoint, sync_interval_hours]
+
+    AndroidTopBlockedDomain:
+      type: object
+      properties:
+        domain:
+          type: string
+        count:
+          type: integer
+      required: [domain, count]
+
+    AndroidStatsBody:
+      type: object
+      properties:
+        device_id:
+          type: string
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+        total_queries:
+          type: integer
+        blocked_count:
+          type: integer
+        top_blocked_domains:
+          type: array
+          items:
+            $ref: "#/components/schemas/AndroidTopBlockedDomain"
+        battery_impact_percent:
+          type: number
+        data_saved_kb:
+          type: integer
+      required: [device_id, period_start, period_end, total_queries, blocked_count]
+
+    AndroidStatsResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        recorded:
+          type: integer
+        battery_impact_percent:
+          type: number
+          nullable: true
+        data_saved_kb:
+          type: integer
+          nullable: true
+      required: [ok, recorded]
+
+    AndroidHeartbeatBody:
+      type: object
+      properties:
+        device_id:
+          type: string
+        vpn_active:
+          type: boolean
+      required: [device_id]
+
+    AndroidHeartbeatResponse:
+      type: object
+      properties:
+        blocklist_updated:
+          type: boolean
+        force_sync:
+          type: boolean
+        vpn_active:
+          type: boolean
+        server_time:
+          type: string
+          format: date-time
+      required: [blocklist_updated, force_sync, vpn_active, server_time]
 
     # DNS
     DnsQueryBody:

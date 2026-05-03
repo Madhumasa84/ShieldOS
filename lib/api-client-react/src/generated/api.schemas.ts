@@ -297,6 +297,57 @@ export interface CategoryBreakdownResponse {
   data: CategoryBreakdownItem[];
 }
 
+export interface AndroidRegisterBody {
+  device_name: string;
+  android_version?: string;
+  app_version?: string;
+  public_key: string;
+}
+
+export interface AndroidRegisterResponse {
+  device_id: string;
+  device_token: string;
+  wireguard_config: string;
+  blocklist_url: string;
+  dns_endpoint: string;
+  sync_interval_hours: number;
+}
+
+export interface AndroidTopBlockedDomain {
+  domain: string;
+  count: number;
+}
+
+export interface AndroidStatsBody {
+  device_id: string;
+  period_start: string;
+  period_end: string;
+  total_queries: number;
+  blocked_count: number;
+  top_blocked_domains?: AndroidTopBlockedDomain[];
+  battery_impact_percent?: number;
+  data_saved_kb?: number;
+}
+
+export interface AndroidStatsResponse {
+  ok: boolean;
+  recorded: number;
+  battery_impact_percent?: number | null;
+  data_saved_kb?: number | null;
+}
+
+export interface AndroidHeartbeatBody {
+  device_id: string;
+  vpn_active?: boolean;
+}
+
+export interface AndroidHeartbeatResponse {
+  blocklist_updated: boolean;
+  force_sync: boolean;
+  vpn_active: boolean;
+  server_time: string;
+}
+
 export interface DnsQueryBody {
   domain: string;
   device_id?: string;

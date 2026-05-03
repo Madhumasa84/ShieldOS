@@ -10,6 +10,8 @@ import { isAuthenticated, setAuthenticated, clearTokens } from "@/lib/auth";
 
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import Setup from "@/pages/setup";
+import ApiDocs from "@/pages/api-docs";
 import Dashboard from "@/pages/dashboard";
 import Blocklist from "@/pages/blocklist";
 import Devices from "@/pages/devices";
@@ -190,6 +192,8 @@ function Router() {
         <ProtectedRoute path="/devices" component={Devices} />
         <ProtectedRoute path="/threats" component={Threats} />
         <ProtectedRoute path="/settings" component={Settings} />
+        <ProtectedRoute path="/setup" component={Setup} />
+        <ProtectedRoute path="/api-docs" component={ApiDocs} />
 
         <Route component={NotFound} />
       </Switch>

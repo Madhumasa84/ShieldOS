@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { eq, and, desc, sql, count } from "drizzle-orm";
+import { eq, and, desc, sql, count, asc } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -575,6 +575,172 @@ PersistentKeepalive = 25
     wireguard_config: wireguardConfig,
     blocklist_url: blocklistUrl,
     recommended_sync_interval_hours: 24,
+  });
+});
+
+// ─── v1 API: Device Registration ─────────────────────────────────────────────
+router.post("/v1/android/register", requireAuth, async (req: AuthRequest, res) => {
+  const { device_name, android_version, app_version, public_key } = req.body ?? {};
+  if (!device_name || !public_key || typeof device_name !== "string" || typeof public_key !== "string") {
+    res.status(400).json({ error: "device_name and public_key are required" });
+    return;
+  }
+
+  const serverPublicKey = process.env["WG_SERVER_PUBLIC_KEY"] ?? "SERVER_PUBLIC_KEY_HERE";
+  const serverEndpoint = process.env["WG_SERVER_ENDPOINT"] ?? "vpn.shieldos.app:51820";
+
+  const privateKeyBytes = crypto.randomBytes(32);
+  privateKeyBytes[0]! &= 248;
+  privateKeyBytes[31]! &= 127;
+  privateKeyBytes[31]! |= 64;
+  const privateKey = privateKeyBytes.toString("base64");
+  const derivedPublicKey = crypto.createHash("sha256").update(privateKeyBytes).digest("base64");
+
+  const [device] = await db
+    .insert(devicesTable)
+    .values({
+      userId: req.userId!,
+      name: `${device_name} (Android ${android_version ?? "?"})`,
+      publicKey: derivedPublicKey,
+      privateKeyEncrypted: privateKey,
+      isActive: true,
+    })
+    .returning();
+
+  // Issue a device-scoped token (30d)
+  const deviceToken = (jwt as any).sign(
+    { userId: req.userId!, deviceId: device!.id, role: "device" },
+    JWT_SECRET,
+    { expiresIn: ANDROID_TOKEN_EXPIRY }
+  );
+
+  const baseUrl = `https://${(process.env["REPLIT_DOMAINS"] ?? "").split(",")[0] ?? "localhost"}/api`;
+  const wireguardConfig = `[Interface]\nPrivateKey = ${privateKey}\nAddress = 10.8.0.2/24\nDNS = 1.1.1.1, 1.0.0.1\n\n[Peer]\nPublicKey = ${serverPublicKey}\nAllowedIPs = 0.0.0.0/0, ::/0\nEndpoint = ${serverEndpoint}\nPersistentKeepalive = 25\n`;
+
+  res.status(201).json({
+    device_id: String(device!.id),
+    device_token: deviceToken,
+    wireguard_config: wireguardConfig,
+    blocklist_url: `${baseUrl}/v1/android/blocklist`,
+    dns_endpoint: `${baseUrl}/v1/dns/query`,
+    sync_interval_hours: 24,
+  });
+});
+
+// ─── v1 API: Blocklist (alias of /android/blocklist/sync) ────────────────────
+router.get("/v1/android/blocklist", requireAuth, async (req, res) => {
+  const { buf, etag } = await getBlocklistCompressed();
+  const clientEtag = req.headers["if-none-match"];
+  if (clientEtag && clientEtag === etag) {
+    res.status(304).end();
+    return;
+  }
+  const rows = await db.select({ count: count() }).from(systemBlocklistTable);
+  const domainCount = rows[0]?.count ?? 0;
+  res.setHeader("Content-Type", "text/plain");
+  res.setHeader("Content-Encoding", "gzip");
+  res.setHeader("ETag", etag);
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.setHeader("X-Domain-Count", String(domainCount));
+  res.end(buf);
+});
+
+// ─── v1 API: Stats Push ───────────────────────────────────────────────────────
+router.post("/v1/android/stats", requireAuth, async (req: AuthRequest, res) => {
+  const {
+    device_id,
+    period_start,
+    period_end,
+    total_queries,
+    blocked_count,
+    top_blocked_domains,
+    battery_impact_percent,
+    data_saved_kb,
+  } = req.body ?? {};
+
+  if (!device_id || blocked_count == null || total_queries == null || !period_start || !period_end) {
+    res.status(400).json({ error: "device_id, blocked_count, total_queries, period_start, period_end are required" });
+    return;
+  }
+
+  const [device] = await db
+    .select()
+    .from(devicesTable)
+    .where(and(eq(devicesTable.id, Number(device_id)), eq(devicesTable.userId, req.userId!)))
+    .limit(1);
+
+  if (!device) {
+    res.status(404).json({ error: "Device not found" });
+    return;
+  }
+
+  await db.update(devicesTable).set({ lastSeen: new Date(period_end) }).where(eq(devicesTable.id, device.id));
+
+  // Async log top blocked domains
+  setImmediate(async () => {
+    try {
+      const domains = Array.isArray(top_blocked_domains) ? top_blocked_domains : [];
+      for (const entry of domains.slice(0, 20)) {
+        if (entry?.domain && typeof entry.domain === "string") {
+          await db.insert(blockedRequestsTable).values({
+            deviceId: device.id,
+            domain: String(entry.domain).toLowerCase(),
+            category: "unknown",
+            wasBlocked: true,
+            timestamp: new Date(period_end),
+          }).onConflictDoNothing();
+        }
+      }
+    } catch { /* best-effort */ }
+  });
+
+  res.json({
+    ok: true,
+    recorded: Number(blocked_count),
+    battery_impact_percent: battery_impact_percent ?? null,
+    data_saved_kb: data_saved_kb ?? null,
+  });
+});
+
+// ─── v1 API: Heartbeat ────────────────────────────────────────────────────────
+router.post("/v1/android/heartbeat", requireAuth, async (req: AuthRequest, res) => {
+  const { device_id, vpn_active } = req.body ?? {};
+  if (!device_id) {
+    res.status(400).json({ error: "device_id is required" });
+    return;
+  }
+
+  const [device] = await db
+    .select()
+    .from(devicesTable)
+    .where(and(eq(devicesTable.id, Number(device_id)), eq(devicesTable.userId, req.userId!)))
+    .limit(1);
+
+  if (!device) {
+    res.status(404).json({ error: "Device not found" });
+    return;
+  }
+
+  const now = new Date();
+  await db.update(devicesTable).set({ lastSeen: now, isActive: true }).where(eq(devicesTable.id, device.id));
+
+  // Check if blocklist was synced more recently than device's last seen
+  const [latestSync] = await db
+    .select({ completedAt: blocklistSyncStatusTable.completedAt })
+    .from(blocklistSyncStatusTable)
+    .where(eq(blocklistSyncStatusTable.status, "completed"))
+    .orderBy(desc(blocklistSyncStatusTable.completedAt))
+    .limit(1);
+
+  const blocklistUpdatedAt = latestSync?.completedAt;
+  const lastSeen = device.lastSeen;
+  const forceSync = !!(blocklistUpdatedAt && lastSeen && blocklistUpdatedAt > lastSeen);
+
+  res.json({
+    blocklist_updated: forceSync,
+    force_sync: forceSync,
+    vpn_active: vpn_active ?? false,
+    server_time: now.toISOString(),
   });
 });
 
