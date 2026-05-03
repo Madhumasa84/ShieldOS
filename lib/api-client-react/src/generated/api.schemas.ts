@@ -301,6 +301,100 @@ export interface OkResponse {
   ok: boolean;
 }
 
+export interface AnalyticsOverview {
+  totalRequests: number;
+  blocked: number;
+  allowed: number;
+  blockRate: number;
+  threats: number;
+  deviceCount: number;
+}
+
+export interface BlockedOverTimeItem {
+  bucket: string;
+  total: number;
+  blocked: number;
+  allowed: number;
+  blockRate: number;
+}
+
+export interface BlockedOverTimeResponse {
+  data: BlockedOverTimeItem[];
+  granularity: string;
+}
+
+export interface TopDomainItem {
+  domain: string;
+  category: string;
+  count: number;
+}
+
+export interface TopDomainsResponse {
+  domains: TopDomainItem[];
+}
+
+export interface CategoryItem {
+  category: string;
+  count: number;
+  percent?: number;
+}
+
+export interface ByCategoryResponse {
+  categories: CategoryItem[];
+  total: number;
+}
+
+export interface DeviceStatItem {
+  deviceId?: number;
+  name: string;
+  total: number;
+  blocked: number;
+  allowed: number;
+  blockRate: number;
+}
+
+export interface ByDeviceResponse {
+  devices: DeviceStatItem[];
+}
+
+export interface ReportItem {
+  id: number;
+  range: string;
+  format: string;
+  fileName?: string | null;
+  fileSize?: number | null;
+  status: string;
+  createdAt: string;
+}
+
+export interface ReportHistoryResponse {
+  reports: ReportItem[];
+}
+
+export interface ReportScheduleItem {
+  id?: number;
+  frequency?: string;
+  format?: string;
+  range?: string;
+  webhookUrl?: string | null;
+  enabled?: boolean;
+  lastRunAt?: string | null;
+  nextRunAt?: string | null;
+  createdAt?: string;
+}
+
+export interface ReportScheduleResponse {
+  schedule: ReportScheduleItem;
+}
+
+export interface UpsertScheduleBody {
+  frequency?: string;
+  format?: string;
+  range?: string;
+  webhook_url?: string;
+  enabled?: boolean;
+}
+
 export type NotificationItemData = { [key: string]: unknown } | null;
 
 export interface NotificationItem {

@@ -5,3 +5,4 @@ export * from "./threats";
 export * from "./system-blocklist";
 export * from "./dns-allowlist";
 export * from "./notifications";
+export * from "./reports";

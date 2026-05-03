@@ -22,6 +22,10 @@ tags:
     description: Dashboard aggregates
   - name: admin
     description: Admin user management
+  - name: analytics
+    description: Analytics dashboards - blocked requests, top domains, categories, devices, threats
+  - name: reports
+    description: Exportable reports (PDF/CSV/JSON) and scheduled report delivery
   - name: notifications
     description: In-app notifications, alert rules, and webhooks
   - name: android
@@ -1672,6 +1676,144 @@ components:
         ok:
           type: boolean
       required: [ok]
+
+    # ANALYTICS
+    AnalyticsOverview:
+      type: object
+      properties:
+        totalRequests: { type: integer }
+        blocked: { type: integer }
+        allowed: { type: integer }
+        blockRate: { type: number }
+        threats: { type: integer }
+        deviceCount: { type: integer }
+      required: [totalRequests, blocked, allowed, blockRate, threats, deviceCount]
+
+    BlockedOverTimeItem:
+      type: object
+      properties:
+        bucket: { type: string }
+        total: { type: integer }
+        blocked: { type: integer }
+        allowed: { type: integer }
+        blockRate: { type: number }
+      required: [bucket, total, blocked, allowed, blockRate]
+
+    BlockedOverTimeResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BlockedOverTimeItem"
+        granularity: { type: string }
+      required: [data, granularity]
+
+    TopDomainItem:
+      type: object
+      properties:
+        domain: { type: string }
+        category: { type: string }
+        count: { type: integer }
+      required: [domain, category, count]
+
+    TopDomainsResponse:
+      type: object
+      properties:
+        domains:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopDomainItem"
+      required: [domains]
+
+    CategoryItem:
+      type: object
+      properties:
+        category: { type: string }
+        count: { type: integer }
+        percent: { type: number }
+      required: [category, count]
+
+    ByCategoryResponse:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryItem"
+        total: { type: integer }
+      required: [categories, total]
+
+    DeviceStatItem:
+      type: object
+      properties:
+        deviceId: { type: integer }
+        name: { type: string }
+        total: { type: integer }
+        blocked: { type: integer }
+        allowed: { type: integer }
+        blockRate: { type: number }
+      required: [name, total, blocked, allowed, blockRate]
+
+    ByDeviceResponse:
+      type: object
+      properties:
+        devices:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeviceStatItem"
+      required: [devices]
+
+    # REPORTS
+    ReportItem:
+      type: object
+      properties:
+        id: { type: integer }
+        range: { type: string }
+        format: { type: string }
+        fileName: { type: string, nullable: true }
+        fileSize: { type: integer, nullable: true }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, range, format, status, createdAt]
+
+    ReportHistoryResponse:
+      type: object
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportItem"
+      required: [reports]
+
+    ReportScheduleItem:
+      type: object
+      properties:
+        id: { type: integer }
+        frequency: { type: string }
+        format: { type: string }
+        range: { type: string }
+        webhookUrl: { type: string, nullable: true }
+        enabled: { type: boolean }
+        lastRunAt: { type: string, nullable: true }
+        nextRunAt: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    ReportScheduleResponse:
+      type: object
+      properties:
+        schedule:
+          $ref: "#/components/schemas/ReportScheduleItem"
+      required: [schedule]
+
+    UpsertScheduleBody:
+      type: object
+      properties:
+        frequency: { type: string }
+        format: { type: string }
+        range: { type: string }
+        webhook_url: { type: string }
+        enabled: { type: boolean }
 
     # NOTIFICATIONS
     NotificationItem:

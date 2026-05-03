@@ -4,6 +4,8 @@
 
 Full-stack privacy backend + admin dashboard for an Android privacy app that blocks trackers and protects user data. Supports full multi-user system with admin and user roles.
 
+Features: dashboard, blocklist management, device management, threat feed, analytics (6 recharts charts, PDF/CSV/JSON export), notifications (SSE, alert rules, webhooks), scheduled reports, Android API bridge, DNS engine, admin user management.
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces

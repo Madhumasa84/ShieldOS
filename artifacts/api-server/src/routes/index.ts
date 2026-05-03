@@ -12,6 +12,8 @@ import exportRouter from "./export";
 import androidRouter from "./android";
 import dnsRouter from "./dns";
 import notificationsRouter from "./notifications";
+import analyticsRouter from "./analytics";
+import reportsRouter from "./reports";
 
 const router: IRouter = Router();
 
@@ -28,5 +30,7 @@ router.use(exportRouter);
 router.use(androidRouter);
 router.use(dnsRouter);
 router.use(notificationsRouter);
+router.use(analyticsRouter);
+router.use(reportsRouter);
 
 export default router;

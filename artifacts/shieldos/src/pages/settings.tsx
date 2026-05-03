@@ -5,12 +5,169 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { User, Activity, Clock, Users, ShieldCheck, RefreshCw, Ban, ChevronUp, ChevronDown, KeyRound, Copy, Check, FileDown, Trash2, AlertTriangle, Loader2, Package } from "lucide-react";
+import { User, Activity, Clock, Users, ShieldCheck, RefreshCw, Ban, ChevronUp, ChevronDown, KeyRound, Copy, Check, FileDown, Trash2, AlertTriangle, Loader2, Package, CalendarClock, FileText, FileSpreadsheet, FileJson, ToggleLeft, ToggleRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { isAdmin as checkIsAdmin, isAuthenticated, clearTokens } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+
+// ── Scheduled Reports Card ────────────────────────────────────────────────────
+function ScheduledReportsCard() {
+  const [schedule, setSchedule] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ frequency: "weekly", format: "pdf", range: "30d", webhook_url: "", enabled: true });
+  const { toast } = useToast();
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [sched, hist] = await Promise.all([
+        fetch("/api/v1/reports/schedule", { credentials: "include" }).then(r => r.json()),
+        fetch("/api/v1/reports/history", { credentials: "include" }).then(r => r.json()),
+      ]);
+      if (sched.schedule) {
+        setSchedule(sched.schedule);
+        setForm({ frequency: sched.schedule.frequency, format: sched.schedule.format, range: sched.schedule.range, webhook_url: sched.schedule.webhookUrl ?? "", enabled: sched.schedule.enabled });
+      }
+      setHistory(hist.reports ?? []);
+    } catch {}
+    setLoading(false);
+  };
+
+  useState(() => { load(); });
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/v1/reports/schedule", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, webhook_url: form.webhook_url || undefined }),
+      });
+      const data = await res.json();
+      setSchedule(data.schedule);
+      toast({ title: "Schedule saved" });
+    } catch { toast({ title: "Failed to save schedule", variant: "destructive" }); }
+    setSaving(false);
+  };
+
+  const deleteSchedule = async () => {
+    await fetch("/api/v1/reports/schedule", { method: "DELETE", credentials: "include" });
+    setSchedule(null);
+    toast({ title: "Schedule deleted" });
+  };
+
+  const deleteReport = async (id: number) => {
+    await fetch(`/api/v1/reports/${id}`, { method: "DELETE", credentials: "include" });
+    setHistory(h => h.filter(r => r.id !== id));
+  };
+
+  const fmtSize = (bytes: number) => bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : bytes > 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${bytes} B`;
+
+  return (
+    <Card className="border-primary/20 shadow-[0_0_15px_rgba(0,229,255,0.05)] bg-card/50">
+      <CardHeader>
+        <CardTitle className="text-xl flex items-center gap-2">
+          <CalendarClock className="w-5 h-5 text-primary" />
+          Scheduled Reports
+        </CardTitle>
+        <CardDescription>Auto-generate and deliver privacy reports on a recurring schedule.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {loading ? (
+          <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Loading...</div>
+        ) : (
+          <>
+            {/* Config */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">Frequency</label>
+                <Select value={form.frequency} onValueChange={v => setForm(f => ({ ...f, frequency: v }))}>
+                  <SelectTrigger className="h-8 text-xs bg-background"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly (every Monday)</SelectItem>
+                    <SelectItem value="monthly">Monthly (1st of month)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">Format</label>
+                <Select value={form.format} onValueChange={v => setForm(f => ({ ...f, format: v }))}>
+                  <SelectTrigger className="h-8 text-xs bg-background"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pdf">PDF</SelectItem>
+                    <SelectItem value="csv">CSV</SelectItem>
+                    <SelectItem value="json">JSON</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">Date Range</label>
+                <Select value={form.range} onValueChange={v => setForm(f => ({ ...f, range: v }))}>
+                  <SelectTrigger className="h-8 text-xs bg-background"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7d">Last 7 days</SelectItem>
+                    <SelectItem value="30d">Last 30 days</SelectItem>
+                    <SelectItem value="90d">Last 90 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">Webhook URL (optional)</label>
+                <Input value={form.webhook_url} onChange={e => setForm(f => ({ ...f, webhook_url: e.target.value }))} placeholder="https://" className="h-8 text-xs bg-background font-mono" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={save} disabled={saving} className="h-7 text-xs gap-1.5">
+                {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CalendarClock className="w-3 h-3" />}
+                {schedule ? "Update Schedule" : "Create Schedule"}
+              </Button>
+              {schedule && (
+                <Button size="sm" variant="ghost" onClick={deleteSchedule} className="h-7 text-xs text-destructive/70 hover:text-destructive">
+                  Delete Schedule
+                </Button>
+              )}
+              {schedule && (
+                <span className="text-xs text-muted-foreground font-mono ml-auto">
+                  Next run: {schedule.nextRunAt ? format(new Date(schedule.nextRunAt), "MMM d, yyyy") : "—"}
+                </span>
+              )}
+            </div>
+
+            {/* Report history */}
+            {history.length > 0 && (
+              <div>
+                <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">Report History ({history.length})</p>
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {history.map(r => (
+                    <div key={r.id} className="flex items-center gap-3 p-2 rounded-md border border-border/50 bg-background/40 text-xs">
+                      <span className="text-primary">
+                        {r.format === "pdf" ? <FileText className="w-4 h-4" /> : r.format === "csv" ? <FileSpreadsheet className="w-4 h-4" /> : <FileJson className="w-4 h-4" />}
+                      </span>
+                      <span className="font-mono text-muted-foreground">{r.range}</span>
+                      <Badge variant="outline" className="text-[10px] h-4 px-1 font-mono uppercase">{r.format}</Badge>
+                      {r.fileSize && <span className="text-muted-foreground/60">{fmtSize(r.fileSize)}</span>}
+                      <span className="text-muted-foreground/60 ml-auto">{format(new Date(r.createdAt), "MMM d, HH:mm")}</span>
+                      <a href={`/api/v1/reports/${r.id}/download`} className="text-primary hover:underline" download>↓</a>
+                      <button onClick={() => deleteReport(r.id)} className="text-muted-foreground/40 hover:text-destructive">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 interface AdminUser {
   id: number;
@@ -510,6 +667,9 @@ export default function Settings() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Scheduled Reports */}
+        {activeTab === "profile" && <ScheduledReportsCard />}
 
         {/* Users Tab (admin only) */}
         {activeTab === "users" && isAdminUser && (
