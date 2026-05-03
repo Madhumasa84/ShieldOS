@@ -1,0 +1,85 @@
+ShieldOS is feature complete. Prepare for production.
+
+════════════════════════════════════════════
+ADD — PRODUCTION HARDENING + LAUNCH PREP
+════════════════════════════════════════════
+
+1. RATE LIMITING:
+Add express-rate-limit to ALL routes:
+- Auth endpoints: 10 req/15min per IP
+- API endpoints: 300 req/min per user
+- DNS query endpoint: 10,000 req/min per device
+- Report generation: 10 req/hour per user
+Return 429 with Retry-After header
+
+2. SECURITY HEADERS:
+Add helmet.js with strict config:
+- HSTS: max-age=31536000; includeSubDomains
+- CSP: strict policy, no unsafe-inline
+- X-Frame-Options: DENY
+- X-Content-Type-Options: nosniff
+- Referrer-Policy: no-referrer
+- Permissions-Policy: camera=(), microphone=()
+Remove X-Powered-By completely
+
+3. ERROR HANDLING:
+Global error handler:
+- Never expose stack traces in production
+- Log full error internally (console.error)
+- Return generic message to client:
+  { "error": "Internal server error", "code": "ERR_INTERNAL" }
+- Custom error codes for known errors:
+  ERR_NOT_FOUND, ERR_UNAUTHORIZED, ERR_RATE_LIMITED,
+  ERR_VALIDATION, ERR_DEVICE_NOT_FOUND
+
+4. HEALTH CHECK ENDPOINTS:
+GET /health → { "status": "ok", "uptime": 3600 }
+GET /health/detailed (admin token required) → {
+  "status": "ok",
+  "database": "connected",
+  "blocklist_entries": 80000,
+  "cache_size": 12450,
+  "memory_mb": 245,
+  "uptime_seconds": 3600,
+  "version": "1.0.0"
+}
+
+5. ENVIRONMENT VALIDATION:
+On startup, validate ALL required env vars exist.
+If any missing → log clear error message and exit.
+Required vars:
+- CLERK_SECRET_KEY
+- DATABASE_URL
+- JWT_SECRET (min 32 chars)
+- NODE_ENV
+
+6. LANDING PAGE (/ when not logged in):
+Replace login redirect with proper landing page:
+Hero: "Block Every Tracker. Own Your Privacy."
+Subhead: "ShieldOS protects your Android device from
+ads, trackers, and malware at the DNS level."
+
+Features section (3 cards):
+- 🛡️ 80,000+ Domains Blocked
+- ⚡ Real-Time DNS Protection
+- 📊 Full Analytics Dashboard
+
+How it works (3 steps):
+1. Deploy ShieldOS on your server
+2. Install Android app + connect
+3. Every tracker blocked automatically
+
+CTA: "Open Dashboard" → /dashboard
+GitHub link → your repo
+
+7. README.md (complete):
+- What ShieldOS is
+- One-command Replit deploy instructions
+- Android app setup guide
+- Environment variables reference
+- API documentation link
+- Screenshots (placeholder links)
+- License: MIT
+
+Add all security items to existing middleware.
+Do not break any existing features.

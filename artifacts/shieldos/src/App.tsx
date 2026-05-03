@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { isAuthenticated, setAuthenticated, clearTokens } from "@/lib/auth";
 
+import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Setup from "@/pages/setup";
@@ -187,8 +188,10 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
 
+        {/* Public landing page */}
+        <Route path="/" component={() => isAuthenticated() ? <Redirect to="/dashboard" /> : <Landing />} />
+
         {/* Protected app routes */}
-        <ProtectedRoute path="/" component={() => <Redirect to="/dashboard" />} />
         <ProtectedRoute path="/dashboard" component={Dashboard} />
         <ProtectedRoute path="/blocklist" component={Blocklist} />
         <ProtectedRoute path="/devices" component={Devices} />

@@ -117,7 +117,7 @@ router.post("/v1/dns/batch", requireAuth, async (req: AuthRequest, res) => {
 
 // ─── GET /v1/dns/stats/:deviceId ─────────────────────────────────────────────
 router.get("/v1/dns/stats/:deviceId", requireAuth, async (req: AuthRequest, res) => {
-  const deviceId = parseInt(req.params["deviceId"]!, 10);
+  const deviceId = parseInt(req.params["deviceId"] as string, 10);
   if (isNaN(deviceId)) {
     res.status(400).json({ message: "Invalid deviceId" });
     return;
@@ -282,7 +282,7 @@ router.post("/v1/dns/allow", requireAuth, async (req: AuthRequest, res) => {
 
 // ─── DELETE /v1/dns/allow/:domain ─────────────────────────────────────────────
 router.delete("/v1/dns/allow/:domain", requireAuth, async (req: AuthRequest, res) => {
-  const domain = decodeURIComponent(req.params["domain"]!).toLowerCase();
+  const domain = decodeURIComponent(req.params["domain"] as string).toLowerCase();
 
   const deleted = await db
     .delete(dnsAllowlistTable)

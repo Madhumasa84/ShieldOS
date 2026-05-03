@@ -6,6 +6,8 @@ Full-stack privacy backend + admin dashboard for an Android privacy app that blo
 
 Features: dashboard, blocklist management, device management, threat feed, analytics (6 recharts charts, PDF/CSV/JSON export), notifications (SSE, alert rules, webhooks), scheduled reports, Android API bridge, DNS engine, admin user management.
 
+**Production hardening**: Helmet.js security headers (HSTS, CSP, X-Frame-Options: DENY, noSniff, Referrer-Policy, Permissions-Policy), tiered rate limiting (express-rate-limit), global error handler (no stack trace leakage), environment validation on startup (exits on missing vars), `/api/v1/health` + `/api/v1/health/detailed` endpoints, landing page at `/`.
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces

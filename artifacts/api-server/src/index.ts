@@ -1,6 +1,10 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { warmBlocklist } from "./services/dns-engine";
+import { validateEnv } from "./lib/validateEnv";
+
+// Validate required environment variables before anything else
+validateEnv();
 
 const rawPort = process.env["PORT"];
 
